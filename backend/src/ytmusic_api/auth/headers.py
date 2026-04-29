@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -48,9 +49,17 @@ class HeadersStore:
         """Run forever; reload self._cached whenever the file changes."""
         watch_dir = self._path.parent
         watch_dir.mkdir(parents=True, exist_ok=True)
-        async for changes in awatch(watch_dir, debounce=100):
-            for _change_type, changed_path in changes:
-                if Path(changed_path) == self._path:
-                    self._load()
-                    logger.info("Reloaded headers from %s", self._path)
-                    break
+        try:
+            async for changes in awatch(watch_dir, debounce=100):
+                for _change_type, changed_path in changes:
+                    if Path(changed_path) == self._path:
+                        self._load()
+                        logger.info("Reloaded headers from %s", self._path)
+                        break
+        except asyncio.CancelledError:
+            # Normal shutdown path from lifespan cleanup; re-raise so the
+            # awaiting task sees CancelledError.
+            raise
+        except Exception:
+            logger.exception("watch() exited unexpectedly for %s", self._path)
+            raise
