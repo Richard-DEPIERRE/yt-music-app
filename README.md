@@ -15,19 +15,19 @@ A personal-use mobile music client backed by a self-hosted FastAPI service that 
 
 ```bash
 docker compose up -d --build
-curl -s http://localhost:8000/v1/health
+curl -s http://localhost:8001/v1/health
 ```
 
 You should see `{"status":"degraded","auth_status":"expired",...}`. That means the backend is alive but no cookies are loaded yet.
 
 ### 2. Cloudflare Tunnel
 
-We assume you already have `cloudflared` running on the homelab. Add a public hostname routing your chosen subdomain (example: `ytmusic.example.com`) to `http://localhost:8000`:
+We assume you already have `cloudflared` running on the homelab. Add a public hostname routing your chosen subdomain (example: `ytmusic.example.com`) to `http://localhost:8001`:
 
 - Cloudflare Zero Trust dashboard → Networks → Tunnels → your tunnel → Public Hostname → Add
 - Subdomain: `ytmusic`
 - Domain: your zone
-- Service: `HTTP`, URL: `localhost:8000`
+- Service: `HTTP`, URL: `localhost:8001`
 
 ### 3. Cloudflare Access
 
