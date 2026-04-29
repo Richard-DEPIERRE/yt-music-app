@@ -13,6 +13,7 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: write   # required so the coverage comment step can post/update on PRs
 
 jobs:
   backend:
@@ -42,14 +43,26 @@ jobs:
       - name: Test (with coverage)
         run: uv run pytest -v --cov --cov-report=term-missing --cov-report=xml:coverage.xml
 
-      - name: Append coverage summary to job
+      - name: Render coverage as markdown
         if: always()
+        id: coverage-md
         run: |
           {
             echo "## Backend coverage"
             echo ""
             uv run coverage report --format=markdown
-          } >> "$GITHUB_STEP_SUMMARY"
+          } > coverage-summary.md
+          # Echo to job summary too (visible on push-to-main runs that have no PR).
+          cat coverage-summary.md >> "$GITHUB_STEP_SUMMARY"
+          # Expose the file path so later steps can read it.
+          echo "path=backend/coverage-summary.md" >> "$GITHUB_OUTPUT"
+
+      - name: Comment coverage on PR
+        if: always() && github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: backend-coverage   # makes the comment "sticky": one per PR, updated in place
+          path: ${{ steps.coverage-md.outputs.path }}
 
       - name: Upload coverage artifact
         if: always()

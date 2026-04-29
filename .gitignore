@@ -15,6 +15,7 @@ htmlcov/
 .coverage
 coverage.xml
 coverage.json
+coverage-summary.md
 dist/
 build/
 
