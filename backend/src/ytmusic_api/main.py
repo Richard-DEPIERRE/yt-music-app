@@ -12,7 +12,8 @@ from .auth.check import make_real_check
 from .auth.headers import HeadersStore
 from .auth.health import AuthHealthMonitor
 from .config import get_settings
-from .routers import admin, health
+from .routers import admin, catalog, health
+from .services.cache import TtlCache
 from .services.ytmusic_client import YTMusicClient
 
 logging.basicConfig(level=logging.INFO)
@@ -26,12 +27,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     store = HeadersStore(path=settings.yt_headers_path)
     ytm = YTMusicClient(store)
+    cache = TtlCache()
     monitor = AuthHealthMonitor(
         check=make_real_check(ytm),
         interval=settings.auth_health_interval,
     )
 
     app.state.headers_store = store
+    app.state.ytmusic_client = ytm
+    app.state.cache = cache
     app.state.auth_monitor = monitor
 
     watch_task = asyncio.create_task(store.watch())
@@ -42,7 +46,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     finally:
         monitor.stop()
         watch_task.cancel()
-        # monitor_task exits on its own once stop_event is set; no cancel needed.
         await monitor_task
         try:
             await watch_task
@@ -54,19 +57,30 @@ def create_app(
     *,
     headers_store: HeadersStore | None = None,
     auth_monitor: AuthHealthMonitor | None = None,
+    ytmusic_client: YTMusicClient | None = None,
+    cache: TtlCache | None = None,
 ) -> FastAPI:
     """App factory.
 
-    Test code can pass pre-built dependencies to bypass the lifespan setup.
+    Test code can pass any subset of dependencies; lifespan is bypassed if
+    both `headers_store` AND `auth_monitor` are provided.
     """
-    if headers_store is not None and auth_monitor is not None:
-        app = FastAPI(title="yt-music-api", version=API_VERSION)
+    use_lifespan = headers_store is None or auth_monitor is None
+
+    app = FastAPI(
+        title="yt-music-api",
+        version=API_VERSION,
+        lifespan=lifespan if use_lifespan else None,
+    )
+
+    if not use_lifespan:
         app.state.headers_store = headers_store
         app.state.auth_monitor = auth_monitor
-    else:
-        app = FastAPI(title="yt-music-api", version=API_VERSION, lifespan=lifespan)
+        app.state.ytmusic_client = ytmusic_client
+        app.state.cache = cache or TtlCache()
 
     app.include_router(health.router, prefix="/v1")
+    app.include_router(catalog.router, prefix="/v1")
     app.include_router(admin.router)
     return app
 
