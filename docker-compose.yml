@@ -28,7 +28,7 @@ services:
     volumes:
       - ./secrets:/secrets:rw
     ports:
-      - "127.0.0.1:8001:8000"   # cloudflared connects to localhost:8001 (8000 is in use by another homelab service)
+      - "8001:8000"   # bound to all interfaces so cloudflared can reach via the LAN IP (8000 is in use by another homelab service)
     networks:
       - ytmusic_internal
     healthcheck:
