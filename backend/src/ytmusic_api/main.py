@@ -13,6 +13,7 @@ from .auth.headers import HeadersStore
 from .auth.health import AuthHealthMonitor
 from .config import get_settings
 from .routers import admin, health
+from .services.ytmusic_client import YTMusicClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -24,8 +25,9 @@ API_VERSION = _pkg_version("ytmusic-api")
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     store = HeadersStore(path=settings.yt_headers_path)
+    ytm = YTMusicClient(store)
     monitor = AuthHealthMonitor(
-        check=make_real_check(store),
+        check=make_real_check(ytm),
         interval=settings.auth_health_interval,
     )
 
