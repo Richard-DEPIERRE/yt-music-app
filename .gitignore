@@ -13,6 +13,9 @@ __pycache__/
 .ruff_cache/
 htmlcov/
 .coverage
+coverage.xml
+coverage.json
+coverage-summary.md
 dist/
 build/
 
