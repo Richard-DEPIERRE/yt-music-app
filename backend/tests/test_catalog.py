@@ -86,3 +86,61 @@ def test_search_does_not_share_cache_across_queries(catalog_client, fake_ytm):
     catalog_client.get("/v1/search?q=hello")
     catalog_client.get("/v1/search?q=world")
     assert fake_ytm.search_calls == 2
+
+
+def test_get_track_returns_normalised_payload(catalog_client, fake_ytm):
+    fake_ytm.song_payloads["abc"] = {
+        "videoDetails": {
+            "title": "T",
+            "author": "A",
+            "lengthSeconds": "240",
+            "thumbnail": {
+                "thumbnails": [
+                    {"url": "https://lh3/x.jpg", "width": 600, "height": 600}
+                ],
+            },
+        },
+    }
+
+    response = catalog_client.get("/v1/track/abc")
+    assert response.status_code == 200
+    body = response.json()
+    assert body == {
+        "videoId": "abc",
+        "title": "T",
+        "artistName": "A",
+        "albumName": None,
+        "albumBrowseId": None,
+        "artistBrowseId": None,
+        "durationMs": 240_000,
+        "thumbnail": {"url": "https://lh3/x.jpg", "width": 600, "height": 600},
+    }
+
+
+def test_get_track_404_when_not_found(catalog_client, fake_ytm):
+    response = catalog_client.get("/v1/track/missing")
+    assert response.status_code == 404
+
+
+def test_get_track_caches_per_videoid(catalog_client, fake_ytm):
+    fake_ytm.song_payloads["abc"] = {
+        "videoDetails": {
+            "title": "T",
+            "author": "A",
+            "lengthSeconds": 200,
+            "thumbnail": {"thumbnails": []},
+        },
+    }
+    call_count = 0
+    original_get_song = fake_ytm.get_song
+
+    async def counting_get_song(video_id):
+        nonlocal call_count
+        call_count += 1
+        return await original_get_song(video_id)
+
+    fake_ytm.get_song = counting_get_song  # type: ignore[assignment]
+
+    catalog_client.get("/v1/track/abc")
+    catalog_client.get("/v1/track/abc")
+    assert call_count == 1
