@@ -71,3 +71,27 @@ jobs:
           name: backend-coverage
           path: backend/coverage.xml
           retention-days: 14
+
+  flutter:
+    name: app (analyze + test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.0"
+          channel: stable
+          cache: true
+
+      - name: pub get
+        run: flutter pub get
+
+      - name: analyze
+        run: flutter analyze
+
+      - name: test
+        run: flutter test
