@@ -70,9 +70,7 @@ class ApiClient {
       );
     }
   }
-}
 
-extension ApiClientCatalog on ApiClient {
   Future<List<SearchResult>> search(
     String query, {
     String? type,
