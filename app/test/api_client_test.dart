@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ytmusic/core/api/api_client.dart';
 import 'package:ytmusic/core/api/api_config.dart';
+import 'package:ytmusic/core/api/models/search_result.dart';
 
 class _RecordingAdapter implements HttpClientAdapter {
   RequestOptions? lastRequest;
@@ -69,5 +70,52 @@ void main() {
     client.dio.httpClientAdapter = adapter;
 
     expect(client.getHealth(), throwsA(isA<ApiException>()));
+  });
+
+  test('search() returns parsed list of results', () async {
+    final adapter = _RecordingAdapter()
+      ..body = '{"items":[{"type":"song","videoId":"abc","title":"T",'
+          '"artistName":"A","durationMs":180000}],"continuation":null}';
+    final client = ApiClient(
+      config: ApiConfig(
+        baseUrl: 'https://x',
+        cfAccessClientId: 'I',
+        cfAccessClientSecret: 'S',
+      ),
+    );
+    client.dio.httpClientAdapter = adapter;
+
+    final result = await client.search('hello');
+    expect(result, isA<List<SearchResult>>());
+    expect(result.length, 1);
+    expect(result.first.title, 'T');
+    expect(
+      adapter.lastRequest!.uri.toString(),
+      'https://x/v1/search?q=hello&limit=20',
+    );
+  });
+
+  test('resolveStream() returns parsed StreamInfo', () async {
+    final adapter = _RecordingAdapter()
+      ..body = '{"videoId":"abc","url":"https://rr/x",'
+          '"expiresAt":"2026-04-30T12:00:00Z","codec":"opus",'
+          '"container":"webm","bitrate":160000,'
+          '"approxDurationMs":180000,"contentLength":4321}';
+    final client = ApiClient(
+      config: ApiConfig(
+        baseUrl: 'https://x',
+        cfAccessClientId: 'I',
+        cfAccessClientSecret: 'S',
+      ),
+    );
+    client.dio.httpClientAdapter = adapter;
+
+    final stream = await client.resolveStream('abc', codec: 'opus');
+    expect(stream.url, 'https://rr/x');
+    expect(stream.codec, 'opus');
+    expect(
+      adapter.lastRequest!.uri.toString(),
+      'https://x/v1/track/abc/stream?codec=opus&quality=high',
+    );
   });
 }
