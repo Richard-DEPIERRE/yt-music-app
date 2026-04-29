@@ -12,7 +12,7 @@ from .auth.check import make_real_check
 from .auth.headers import HeadersStore
 from .auth.health import AuthHealthMonitor
 from .config import get_settings
-from .routers import health
+from .routers import admin, health
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -65,6 +65,7 @@ def create_app(
         app = FastAPI(title="yt-music-api", version=API_VERSION, lifespan=lifespan)
 
     app.include_router(health.router, prefix="/v1")
+    app.include_router(admin.router)
     return app
 
 
