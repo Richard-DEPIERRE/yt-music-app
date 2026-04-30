@@ -9,6 +9,8 @@ from ..models.catalog import Thumbnail
 from ..models.library import (
     LikedSong,
     LikedSongsResponse,
+    PlaylistsResponse,
+    PlaylistSummary,
 )
 from ..services.ytmusic_client import YTMusicClient
 
@@ -63,3 +65,37 @@ async def get_liked(
     tracks = raw.get("tracks") or []
     items = [n for n in (_normalise_liked(t) for t in tracks) if n is not None]
     return LikedSongsResponse(items=items, continuation=None)
+
+
+def _parse_count(raw: Any) -> int | None:
+    if raw is None:
+        return None
+    try:
+        return int(str(raw).replace(",", ""))
+    except (TypeError, ValueError):
+        return None
+
+
+def _normalise_playlist_summary(raw: dict[str, Any]) -> PlaylistSummary | None:
+    pid = raw.get("playlistId") or raw.get("browseId")
+    if not pid:
+        return None
+    return PlaylistSummary(
+        browseId=pid,
+        title=raw.get("title", ""),
+        description=raw.get("description"),
+        trackCount=_parse_count(raw.get("count")),
+        thumbnail=_last_thumb(raw),
+        isOwn=True,
+    )
+
+
+@router.get("/library/playlists", response_model=PlaylistsResponse)
+async def get_playlists(request: Request) -> PlaylistsResponse:
+    ytm: YTMusicClient = request.app.state.ytmusic_client
+    try:
+        raw = await ytm.get_library_playlists(limit=200)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"upstream: {exc}") from exc
+    items = [n for n in (_normalise_playlist_summary(p) for p in raw) if n is not None]
+    return PlaylistsResponse(items=items, continuation=None)
