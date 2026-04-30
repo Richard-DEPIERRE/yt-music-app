@@ -70,6 +70,63 @@ class ApiClient {
       );
     }
   }
+
+  Future<List<SearchResult>> search(
+    String query, {
+    String? type,
+    int limit = 20,
+  }) async {
+    try {
+      final res = await dio.get<Map<String, dynamic>>(
+        '/v1/search',
+        queryParameters: {
+          'q': query,
+          if (type != null) 'type': type,
+          'limit': limit,
+        },
+      );
+      final items = (res.data!['items'] as List)
+          .map((e) => SearchResult.fromJson(e as Map<String, dynamic>))
+          .toList();
+      return items;
+    } on DioException catch (e) {
+      throw ApiException(
+        e.response?.statusCode ?? 0,
+        e.message ?? 'Network error',
+      );
+    }
+  }
+
+  Future<Track> getTrack(String videoId) async {
+    try {
+      final res = await dio.get<Map<String, dynamic>>('/v1/track/$videoId');
+      return Track.fromJson(res.data!);
+    } on DioException catch (e) {
+      throw ApiException(
+        e.response?.statusCode ?? 0,
+        e.message ?? 'Network error',
+      );
+    }
+  }
+
+  Future<StreamInfo> resolveStream(
+    String videoId, {
+    String codec = 'any',
+    String quality = 'high',
+  }) async {
+    try {
+      final res = await dio.get<Map<String, dynamic>>(
+        '/v1/track/$videoId/stream',
+        queryParameters: {'codec': codec, 'quality': quality},
+      );
+      return StreamInfo.fromJson(res.data!);
+    } on DioException catch (e) {
+      throw ApiException(
+        e.response?.statusCode ?? 0,
+        e.message ?? 'Network error',
+      );
+    }
+  }
 }
 
 extension ApiClientCatalog on ApiClient {
