@@ -56,3 +56,44 @@ class YTMusicClient:
             return client.get_library_songs(limit=limit)
 
         return await asyncio.to_thread(_call)
+
+    async def get_liked_songs(self, *, limit: int = 100) -> dict[str, Any]:
+        """Returns ytmusicapi's full liked-songs payload (a playlist-shaped dict)."""
+
+        def _call() -> dict[str, Any]:
+            client = self._build()
+            return client.get_liked_songs(limit=limit)
+
+        return await asyncio.to_thread(_call)
+
+    async def get_library_playlists(self, *, limit: int = 100) -> list[dict[str, Any]]:
+        def _call() -> list[dict[str, Any]]:
+            client = self._build()
+            return client.get_library_playlists(limit=limit)
+
+        return await asyncio.to_thread(_call)
+
+    async def get_playlist(
+        self, playlist_id: str, *, limit: int = 100
+    ) -> dict[str, Any]:
+        def _call() -> dict[str, Any]:
+            client = self._build()
+            return client.get_playlist(playlist_id, limit=limit)
+
+        return await asyncio.to_thread(_call)
+
+    async def get_library_subscriptions(
+        self, *, limit: int = 100
+    ) -> list[dict[str, Any]]:
+        def _call() -> list[dict[str, Any]]:
+            client = self._build()
+            return client.get_library_subscriptions(limit=limit)
+
+        return await asyncio.to_thread(_call)
+
+    async def get_history(self) -> list[dict[str, Any]]:
+        def _call() -> list[dict[str, Any]]:
+            client = self._build()
+            return client.get_history()
+
+        return await asyncio.to_thread(_call)
