@@ -62,6 +62,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             border: InputBorder.none,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.library_music),
+            onPressed: () => context.go('/library'),
+          ),
+        ],
       ),
       body: results.when(
         loading: () => const Center(child: CircularProgressIndicator()),
