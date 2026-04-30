@@ -17,7 +17,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/search',
     redirect: (context, state) {
-      final config = ref.read(apiConfigProvider).valueOrNull;
+      final config = ref.read(apiConfigProvider);
       final configured = config != null && config.isComplete;
       final goingToOnboarding = state.matchedLocation == '/onboarding';
       if (!configured && !goingToOnboarding) return '/onboarding';

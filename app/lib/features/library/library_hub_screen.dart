@@ -13,22 +13,22 @@ class LibraryHubScreen extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.favorite),
             title: const Text('Liked songs'),
-            onTap: () => context.go('/library/liked'),
+            onTap: () => context.push('/library/liked'),
           ),
           ListTile(
             leading: const Icon(Icons.queue_music),
             title: const Text('Playlists'),
-            onTap: () => context.go('/library/playlists'),
+            onTap: () => context.push('/library/playlists'),
           ),
           ListTile(
             leading: const Icon(Icons.subscriptions),
             title: const Text('Subscriptions'),
-            onTap: () => context.go('/library/subscriptions'),
+            onTap: () => context.push('/library/subscriptions'),
           ),
           ListTile(
             leading: const Icon(Icons.history),
             title: const Text('History'),
-            onTap: () => context.go('/library/history'),
+            onTap: () => context.push('/library/history'),
           ),
         ],
       ),

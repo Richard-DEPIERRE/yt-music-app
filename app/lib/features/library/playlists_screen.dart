@@ -70,7 +70,8 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen> {
                           ? '${p.trackCount} tracks'
                           : null,
                       artworkUrl: p.artworkUrl,
-                      onTap: () => context.go('/library/playlists/${p.browseId}'),
+                      onTap: () =>
+                          context.push('/library/playlists/${p.browseId}'),
                     );
                   },
                 ),

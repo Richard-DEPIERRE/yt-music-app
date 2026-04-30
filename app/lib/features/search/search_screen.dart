@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,7 +36,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       durationMs: r.durationMs ?? 0,
     );
     await ref.read(audioHandlerProvider).playTrack(track);
-    if (mounted) context.go('/now-playing');
+    if (mounted) unawaited(context.push<void>('/now-playing'));
   }
 
   String _subtitleFor(SearchResult r) {
@@ -65,7 +67,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.library_music),
-            onPressed: () => context.go('/library'),
+            onPressed: () => context.push('/library'),
           ),
         ],
       ),

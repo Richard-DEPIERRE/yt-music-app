@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ytmusic/core/api/api_config.dart';
 import 'package:ytmusic/core/settings/settings_providers.dart';
 import 'package:ytmusic/core/settings/settings_repository.dart';
 
@@ -31,14 +32,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     setState(() => _saving = true);
 
     try {
-      await ref.read(settingsRepositoryProvider).save(
-            ApiConfigInput(
-              baseUrl: _urlController.text.trim(),
-              cfAccessClientId: _cidController.text.trim(),
-              cfAccessClientSecret: _csecretController.text.trim(),
-            ),
-          );
-      ref.invalidate(apiConfigProvider);
+      final input = ApiConfigInput(
+        baseUrl: _urlController.text.trim(),
+        cfAccessClientId: _cidController.text.trim(),
+        cfAccessClientSecret: _csecretController.text.trim(),
+      );
+      await ref.read(settingsRepositoryProvider).save(input);
+      ref.read(apiConfigProvider.notifier).state = ApiConfig(
+        baseUrl: input.baseUrl,
+        cfAccessClientId: input.cfAccessClientId,
+        cfAccessClientSecret: input.cfAccessClientSecret,
+      );
       // GoRouter's redirect doesn't re-evaluate when watched providers change;
       // navigate explicitly so the user lands on /search after a successful save.
       if (mounted) context.go('/search');

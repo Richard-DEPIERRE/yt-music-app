@@ -6,6 +6,10 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   return SettingsRepository();
 });
 
-final apiConfigProvider = FutureProvider<ApiConfig?>((ref) async {
-  return ref.watch(settingsRepositoryProvider).read();
-});
+// Synchronous holder for the current API config. Seeded at app boot in
+// main.dart from SettingsRepository.read() before runApp, then mutated
+// via `ref.read(apiConfigProvider.notifier).state = newConfig` when the
+// user saves credentials in onboarding. Kept synchronous so GoRouter's
+// redirect can decide on the first frame without racing the keychain
+// read.
+final apiConfigProvider = StateProvider<ApiConfig?>((ref) => null);
