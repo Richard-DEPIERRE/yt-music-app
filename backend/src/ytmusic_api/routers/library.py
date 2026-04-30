@@ -7,12 +7,14 @@ from fastapi import APIRouter, HTTPException, Query, Request
 
 from ..models.catalog import Thumbnail
 from ..models.library import (
+    ArtistSubscription,
     LikedSong,
     LikedSongsResponse,
     PlaylistDetailResponse,
     PlaylistsResponse,
     PlaylistSummary,
     PlaylistTrack,
+    SubscriptionsResponse,
 )
 from ..services.ytmusic_client import YTMusicClient
 
@@ -152,3 +154,26 @@ async def get_playlist_detail(
         items=items,
         continuation=None,
     )
+
+
+def _normalise_subscription(raw: dict[str, Any]) -> ArtistSubscription | None:
+    bid = raw.get("browseId")
+    if not bid:
+        return None
+    return ArtistSubscription(
+        browseId=bid,
+        name=raw.get("artist") or raw.get("name", ""),
+        thumbnail=_last_thumb(raw),
+        subscriberCount=raw.get("subscribers"),
+    )
+
+
+@router.get("/library/subscriptions", response_model=SubscriptionsResponse)
+async def get_subscriptions(request: Request) -> SubscriptionsResponse:
+    ytm: YTMusicClient = request.app.state.ytmusic_client
+    try:
+        raw = await ytm.get_library_subscriptions(limit=200)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"upstream: {exc}") from exc
+    items = [n for n in (_normalise_subscription(s) for s in raw) if n is not None]
+    return SubscriptionsResponse(items=items, continuation=None)

@@ -204,3 +204,31 @@ def test_playlist_detail_skips_tracks_without_videoid(library_client, fake_ytm):
     }
     r = library_client.get("/v1/library/playlists/PL1")
     assert [t["videoId"] for t in r.json()["items"]] == ["v2"]
+
+
+def test_subscriptions_returns_normalised(library_client, fake_ytm):
+    fake_ytm.subs_payload = [
+        {
+            "artist": "Artist A",
+            "browseId": "UCa",
+            "subscribers": "1.2M",
+            "thumbnails": [{"url": "https://t/a.jpg", "width": 60, "height": 60}],
+        },
+        {"artist": "Artist B", "browseId": "UCb", "subscribers": None, "thumbnails": []},
+    ]
+    r = library_client.get("/v1/library/subscriptions")
+    assert r.status_code == 200
+    body = r.json()
+    assert [s["browseId"] for s in body["items"]] == ["UCa", "UCb"]
+    assert body["items"][0]["name"] == "Artist A"
+    assert body["items"][0]["subscriberCount"] == "1.2M"
+    assert body["items"][1]["thumbnail"] is None
+
+
+def test_subscriptions_skips_items_missing_browseid(library_client, fake_ytm):
+    fake_ytm.subs_payload = [
+        {"artist": "Artist A", "subscribers": "1M"},
+        {"artist": "Artist B", "browseId": "UCb"},
+    ]
+    r = library_client.get("/v1/library/subscriptions")
+    assert [s["browseId"] for s in r.json()["items"]] == ["UCb"]
