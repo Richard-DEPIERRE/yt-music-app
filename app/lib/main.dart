@@ -10,9 +10,12 @@ import 'package:ytmusic/core/audio/audio_providers.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Build a ProviderContainer eagerly so the handler factory can resolve the
-  // ApiClient via Riverpod when audio_service spins it up.
-  final container = ProviderContainer();
+  // Late-bind the container so the handler's apiClientFactory closure can read
+  // from the same container the override is installed on. Two-scope nesting
+  // breaks Riverpod's scoping invariant (mediaItemStreamProvider depends on
+  // audioHandlerProvider; if the override sits in a child scope, dependent
+  // providers must declare `dependencies` — easier to use one scope).
+  late final ProviderContainer container;
   final handler = await AudioService.init(
     builder: () => AudioPlaybackHandler(
       apiClientFactory: () => container.read(apiClientProvider),
@@ -23,14 +26,14 @@ Future<void> main() async {
       androidNotificationOngoing: true,
     ),
   );
+  container = ProviderContainer(
+    overrides: [audioHandlerProvider.overrideWithValue(handler)],
+  );
 
   runApp(
     UncontrolledProviderScope(
       container: container,
-      child: ProviderScope(
-        overrides: [audioHandlerProvider.overrideWithValue(handler)],
-        child: const UichaaMusicApp(),
-      ),
+      child: const UichaaMusicApp(),
     ),
   );
 }
