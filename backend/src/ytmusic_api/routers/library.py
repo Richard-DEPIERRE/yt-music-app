@@ -1,6 +1,7 @@
 # backend/src/ytmusic_api/routers/library.py
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -21,6 +22,7 @@ from ..models.library import (
 from ..services.ytmusic_client import YTMusicClient
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def _last_thumb(raw: dict[str, Any]) -> Thumbnail | None:
@@ -67,7 +69,11 @@ async def get_liked(
     try:
         raw = await ytm.get_liked_songs(limit=limit)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"upstream: {exc}") from exc
+        logger.exception("get_liked_songs upstream failure")
+        raise HTTPException(
+            status_code=502,
+            detail=f"upstream: {type(exc).__name__}: {exc}",
+        ) from exc
     tracks = raw.get("tracks") or []
     items = [n for n in (_normalise_liked(t) for t in tracks) if n is not None]
     return LikedSongsResponse(items=items, continuation=None)
@@ -102,7 +108,11 @@ async def get_playlists(request: Request) -> PlaylistsResponse:
     try:
         raw = await ytm.get_library_playlists(limit=200)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"upstream: {exc}") from exc
+        logger.exception("get_library_playlists upstream failure")
+        raise HTTPException(
+            status_code=502,
+            detail=f"upstream: {type(exc).__name__}: {exc}",
+        ) from exc
     items = [n for n in (_normalise_playlist_summary(p) for p in raw) if n is not None]
     return PlaylistsResponse(items=items, continuation=None)
 
@@ -139,7 +149,11 @@ async def get_playlist_detail(
     try:
         raw = await ytm.get_playlist(playlist_id, limit=500)
     except Exception as exc:
-        raise HTTPException(status_code=404, detail=f"playlist not found: {exc}") from exc
+        logger.exception("get_playlist upstream failure (id=%s)", playlist_id)
+        raise HTTPException(
+            status_code=404,
+            detail=f"playlist not found: {type(exc).__name__}: {exc}",
+        ) from exc
 
     tracks = raw.get("tracks") or []
     items = [
@@ -176,7 +190,11 @@ async def get_subscriptions(request: Request) -> SubscriptionsResponse:
     try:
         raw = await ytm.get_library_subscriptions(limit=200)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"upstream: {exc}") from exc
+        logger.exception("get_library_subscriptions upstream failure")
+        raise HTTPException(
+            status_code=502,
+            detail=f"upstream: {type(exc).__name__}: {exc}",
+        ) from exc
     items = [n for n in (_normalise_subscription(s) for s in raw) if n is not None]
     return SubscriptionsResponse(items=items, continuation=None)
 
@@ -205,7 +223,13 @@ async def get_history_endpoint(request: Request) -> HistoryResponse:
     ytm: YTMusicClient = request.app.state.ytmusic_client
     try:
         raw = await ytm.get_history()
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"upstream: {exc}") from exc
+    except Exception:
+        # ytmusicapi raises (often with str(exc) == "None") when YouTube
+        # watch history is paused or the account has no history yet. That's
+        # a valid user state, not a server error — return an empty list and
+        # let the screen render its empty state. Full traceback hits stderr
+        # so genuine breakage is still debuggable in `docker compose logs`.
+        logger.exception("get_history upstream failure; returning empty list")
+        return HistoryResponse(items=[], continuation=None)
     items = [n for n in (_normalise_history_item(h) for h in raw) if n is not None]
     return HistoryResponse(items=items, continuation=None)
