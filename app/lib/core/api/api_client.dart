@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:ytmusic/core/api/api_config.dart';
+import 'package:ytmusic/core/api/models/library_models.dart';
 import 'package:ytmusic/core/api/models/search_result.dart';
 import 'package:ytmusic/core/api/models/stream_info.dart';
 import 'package:ytmusic/core/api/models/track.dart';
@@ -127,27 +128,47 @@ class ApiClient {
       );
     }
   }
-}
 
-extension ApiClientCatalog on ApiClient {
-  Future<List<SearchResult>> search(
-    String query, {
-    String? type,
-    int limit = 20,
+  Future<PagedLikedSongs> getLikedSongs({int limit = 200}) async {
+    try {
+      final res = await dio.get<Map<String, dynamic>>(
+        '/v1/library/liked',
+        queryParameters: {'limit': limit},
+      );
+      return PagedLikedSongs.fromJson(res.data!);
+    } on DioException catch (e) {
+      throw ApiException(
+        e.response?.statusCode ?? 0,
+        e.message ?? 'Network error',
+      );
+    }
+  }
+
+  Future<PagedPlaylists> getPlaylists() async {
+    try {
+      final res =
+          await dio.get<Map<String, dynamic>>('/v1/library/playlists');
+      return PagedPlaylists.fromJson(res.data!);
+    } on DioException catch (e) {
+      throw ApiException(
+        e.response?.statusCode ?? 0,
+        e.message ?? 'Network error',
+      );
+    }
+  }
+
+  Future<PlaylistDetail> getPlaylistDetail(
+    String browseId, {
+    String? continuation,
   }) async {
     try {
       final res = await dio.get<Map<String, dynamic>>(
-        '/v1/search',
+        '/v1/library/playlists/$browseId',
         queryParameters: {
-          'q': query,
-          if (type != null) 'type': type,
-          'limit': limit,
+          if (continuation != null) 'continuation': continuation,
         },
       );
-      final items = (res.data!['items'] as List)
-          .map((e) => SearchResult.fromJson(e as Map<String, dynamic>))
-          .toList();
-      return items;
+      return PlaylistDetail.fromJson(res.data!);
     } on DioException catch (e) {
       throw ApiException(
         e.response?.statusCode ?? 0,
@@ -156,29 +177,25 @@ extension ApiClientCatalog on ApiClient {
     }
   }
 
-  Future<Track> getTrack(String videoId) async {
-    try {
-      final res = await dio.get<Map<String, dynamic>>('/v1/track/$videoId');
-      return Track.fromJson(res.data!);
-    } on DioException catch (e) {
-      throw ApiException(
-        e.response?.statusCode ?? 0,
-        e.message ?? 'Network error',
-      );
-    }
-  }
-
-  Future<StreamInfo> resolveStream(
-    String videoId, {
-    String codec = 'any',
-    String quality = 'high',
-  }) async {
+  Future<PagedSubscriptions> getSubscriptions() async {
     try {
       final res = await dio.get<Map<String, dynamic>>(
-        '/v1/track/$videoId/stream',
-        queryParameters: {'codec': codec, 'quality': quality},
+        '/v1/library/subscriptions',
       );
-      return StreamInfo.fromJson(res.data!);
+      return PagedSubscriptions.fromJson(res.data!);
+    } on DioException catch (e) {
+      throw ApiException(
+        e.response?.statusCode ?? 0,
+        e.message ?? 'Network error',
+      );
+    }
+  }
+
+  Future<PagedHistory> getHistory() async {
+    try {
+      final res =
+          await dio.get<Map<String, dynamic>>('/v1/library/history');
+      return PagedHistory.fromJson(res.data!);
     } on DioException catch (e) {
       throw ApiException(
         e.response?.statusCode ?? 0,
