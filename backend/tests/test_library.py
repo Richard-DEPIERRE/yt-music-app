@@ -232,3 +232,36 @@ def test_subscriptions_skips_items_missing_browseid(library_client, fake_ytm):
     ]
     r = library_client.get("/v1/library/subscriptions")
     assert [s["browseId"] for s in r.json()["items"]] == ["UCb"]
+
+
+def _history_item(video_id: str, played: str = "Today") -> dict[str, Any]:
+    return {
+        "videoId": video_id,
+        "title": "T",
+        "artists": [{"name": "Artist"}],
+        "album": {"name": "Album", "id": "MPRabc"},
+        "duration_seconds": 180,
+        "thumbnails": [{"url": "https://t/h.jpg", "width": 60, "height": 60}],
+        "played": played,
+    }
+
+
+def test_history_returns_normalised(library_client, fake_ytm):
+    fake_ytm.history_payload = [
+        _history_item("v1", "Today"),
+        _history_item("v2", "Yesterday"),
+    ]
+    r = library_client.get("/v1/library/history")
+    assert r.status_code == 200
+    body = r.json()
+    assert [h["videoId"] for h in body["items"]] == ["v1", "v2"]
+    assert body["items"][0]["playedSection"] == "Today"
+    assert body["items"][1]["playedSection"] == "Yesterday"
+
+
+def test_history_skips_items_missing_videoid(library_client, fake_ytm):
+    bad = _history_item("v1")
+    bad.pop("videoId")
+    fake_ytm.history_payload = [bad, _history_item("v2")]
+    r = library_client.get("/v1/library/history")
+    assert [h["videoId"] for h in r.json()["items"]] == ["v2"]

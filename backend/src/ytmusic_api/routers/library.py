@@ -8,6 +8,8 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from ..models.catalog import Thumbnail
 from ..models.library import (
     ArtistSubscription,
+    HistoryItem,
+    HistoryResponse,
     LikedSong,
     LikedSongsResponse,
     PlaylistDetailResponse,
@@ -177,3 +179,33 @@ async def get_subscriptions(request: Request) -> SubscriptionsResponse:
         raise HTTPException(status_code=502, detail=f"upstream: {exc}") from exc
     items = [n for n in (_normalise_subscription(s) for s in raw) if n is not None]
     return SubscriptionsResponse(items=items, continuation=None)
+
+
+def _normalise_history_item(raw: dict[str, Any]) -> HistoryItem | None:
+    video_id = raw.get("videoId")
+    if not video_id:
+        return None
+    artist_name = _track_artist_name(raw)
+    album_name, album_bid = _track_album(raw)
+    duration_seconds = raw.get("duration_seconds")
+    return HistoryItem(
+        videoId=video_id,
+        title=raw.get("title", ""),
+        artistName=artist_name,
+        albumName=album_name,
+        albumBrowseId=album_bid,
+        durationMs=None if duration_seconds is None else int(duration_seconds * 1000),
+        thumbnail=_last_thumb(raw),
+        playedSection=raw.get("played"),
+    )
+
+
+@router.get("/library/history", response_model=HistoryResponse)
+async def get_history_endpoint(request: Request) -> HistoryResponse:
+    ytm: YTMusicClient = request.app.state.ytmusic_client
+    try:
+        raw = await ytm.get_history()
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"upstream: {exc}") from exc
+    items = [n for n in (_normalise_history_item(h) for h in raw) if n is not None]
+    return HistoryResponse(items=items, continuation=None)
