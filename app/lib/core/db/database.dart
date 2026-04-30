@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
 
 import 'package:ytmusic/core/db/connection.dart';
+import 'package:ytmusic/core/db/daos/artists_dao.dart';
+import 'package:ytmusic/core/db/daos/playlists_dao.dart';
 import 'package:ytmusic/core/db/daos/tracks_dao.dart';
 import 'package:ytmusic/core/db/tables.dart';
 
@@ -18,7 +20,7 @@ part 'database.g.dart';
     SyncState,
     Settings,
   ],
-  daos: [TracksDao],
+  daos: [TracksDao, PlaylistsDao, ArtistsDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(openConnection());

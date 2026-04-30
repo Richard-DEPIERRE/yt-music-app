@@ -3964,6 +3964,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SyncStateTable syncState = $SyncStateTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
   late final TracksDao tracksDao = TracksDao(this as AppDatabase);
+  late final PlaylistsDao playlistsDao = PlaylistsDao(this as AppDatabase);
+  late final ArtistsDao artistsDao = ArtistsDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
