@@ -40,8 +40,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           );
       ref.invalidate(apiConfigProvider);
       // GoRouter's redirect doesn't re-evaluate when watched providers change;
-      // navigate explicitly so the user lands on /health after a successful save.
-      if (mounted) context.go('/health');
+      // navigate explicitly so the user lands on /search after a successful save.
+      if (mounted) context.go('/search');
     } finally {
       if (mounted) setState(() => _saving = false);
     }

@@ -69,7 +69,7 @@ void main() {
 
     await handler.playTrack(track);
 
-    verify(() => api.resolveStream('abc', codec: 'opus')).called(1);
+    verify(() => api.resolveStream('abc', codec: 'aac')).called(1);
     verify(() => player.setAudioSource(any())).called(1);
     verify(() => player.play()).called(1);
   });
