@@ -115,3 +115,40 @@ def test_liked_is_not_cached_server_side(library_client, fake_ytm, cache):
     # Both responses reflect the live fake payload, never the poisoned cache:
     assert [it["videoId"] for it in r1.json()["items"]] == ["v1"]
     assert [it["videoId"] for it in r2.json()["items"]] == ["v1"]
+
+
+def _playlist_summary(pid: str, title: str = "P", **extra) -> dict[str, Any]:
+    base: dict[str, Any] = {
+        "playlistId": pid,
+        "title": title,
+        "description": "desc",
+        "count": "10",
+        "thumbnails": [{"url": "https://t/p.jpg", "width": 60, "height": 60}],
+    }
+    base.update(extra)
+    return base
+
+
+def test_playlists_returns_normalised_items(library_client, fake_ytm):
+    fake_ytm.playlists_payload = [
+        _playlist_summary("PL1", "Mix"),
+        _playlist_summary("PL2", "Other", count="N/A"),
+    ]
+    r = library_client.get("/v1/library/playlists")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["continuation"] is None
+    assert [p["browseId"] for p in body["items"]] == ["PL1", "PL2"]
+    first = body["items"][0]
+    assert first["title"] == "Mix"
+    assert first["description"] == "desc"
+    assert first["trackCount"] == 10
+    assert body["items"][1]["trackCount"] is None
+
+
+def test_playlists_skips_items_missing_id(library_client, fake_ytm):
+    bad = _playlist_summary("PL1")
+    bad.pop("playlistId")
+    fake_ytm.playlists_payload = [bad, _playlist_summary("PL2")]
+    r = library_client.get("/v1/library/playlists")
+    assert [p["browseId"] for p in r.json()["items"]] == ["PL2"]
