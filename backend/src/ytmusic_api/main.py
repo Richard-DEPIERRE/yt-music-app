@@ -12,7 +12,7 @@ from .auth.check import make_real_check
 from .auth.headers import HeadersStore
 from .auth.health import AuthHealthMonitor
 from .config import get_settings
-from .routers import admin, catalog, health, stream
+from .routers import admin, catalog, health, library, stream
 from .services.cache import TtlCache
 from .services.concurrency import BoundedRunner
 from .services.pot_client import PotClient
@@ -99,6 +99,7 @@ def create_app(
     app.include_router(health.router, prefix="/v1")
     app.include_router(catalog.router, prefix="/v1")
     app.include_router(stream.router, prefix="/v1")
+    app.include_router(library.router, prefix="/v1")
     app.include_router(admin.router)
     return app
 
