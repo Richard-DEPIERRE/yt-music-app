@@ -1,9 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:ytmusic/core/audio/audio_providers.dart';
+import 'package:ytmusic/routing/app_router.dart';
 
 class MiniPlayer extends ConsumerWidget {
   const MiniPlayer({super.key});
@@ -22,7 +22,10 @@ class MiniPlayer extends ConsumerWidget {
     return Material(
       color: Theme.of(context).colorScheme.surfaceContainerHigh,
       child: InkWell(
-        onTap: () => context.go('/now-playing'),
+        // MiniPlayer lives in MaterialApp.router's `builder:` (above the
+        // Navigator), so `context.go(...)` can't find a GoRouter inherited
+        // widget. Read the router from Riverpod and call .go directly.
+        onTap: () => ref.read(appRouterProvider).go('/now-playing'),
         child: SizedBox(
           height: 56,
           child: Row(
