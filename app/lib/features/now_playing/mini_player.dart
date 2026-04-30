@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,9 +25,13 @@ class MiniPlayer extends ConsumerWidget {
       color: Theme.of(context).colorScheme.surfaceContainerHigh,
       child: InkWell(
         // MiniPlayer lives in MaterialApp.router's `builder:` (above the
-        // Navigator), so `context.go(...)` can't find a GoRouter inherited
-        // widget. Read the router from Riverpod and call .go directly.
-        onTap: () => ref.read(appRouterProvider).go('/now-playing'),
+        // Navigator), so `context.push(...)` can't find a GoRouter inherited
+        // widget. Read the router from Riverpod and call .push directly so
+        // the destination is added to the back stack (back arrow + iOS
+        // swipe-back work). push returns a Future that resolves on pop.
+        onTap: () => unawaited(
+          ref.read(appRouterProvider).push<void>('/now-playing'),
+        ),
         child: SizedBox(
           height: 56,
           child: Row(

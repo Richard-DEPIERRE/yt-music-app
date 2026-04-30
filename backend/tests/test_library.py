@@ -265,3 +265,17 @@ def test_history_skips_items_missing_videoid(library_client, fake_ytm):
     fake_ytm.history_payload = [bad, _history_item("v2")]
     r = library_client.get("/v1/library/history")
     assert [h["videoId"] for h in r.json()["items"]] == ["v2"]
+
+
+def test_history_returns_empty_on_upstream_failure(library_client, fake_ytm):
+    """Watch-history-paused / brand-new account: ytmusicapi raises (often
+    with str(exc) == 'None'). Treat as empty history rather than 502.
+    """
+
+    async def boom():
+        raise TypeError(None)
+
+    fake_ytm.get_history = lambda: boom()  # type: ignore[assignment]
+    r = library_client.get("/v1/library/history")
+    assert r.status_code == 200
+    assert r.json() == {"items": [], "continuation": None}
