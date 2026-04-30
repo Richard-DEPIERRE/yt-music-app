@@ -3,6 +3,12 @@ import 'package:go_router/go_router.dart';
 
 import 'package:ytmusic/core/settings/settings_providers.dart';
 import 'package:ytmusic/features/health/health_screen.dart';
+import 'package:ytmusic/features/library/history_screen.dart';
+import 'package:ytmusic/features/library/library_hub_screen.dart';
+import 'package:ytmusic/features/library/liked_songs_screen.dart';
+import 'package:ytmusic/features/library/playlist_detail_screen.dart';
+import 'package:ytmusic/features/library/playlists_screen.dart';
+import 'package:ytmusic/features/library/subscriptions_screen.dart';
 import 'package:ytmusic/features/now_playing/now_playing_screen.dart';
 import 'package:ytmusic/features/onboarding/onboarding_screen.dart';
 import 'package:ytmusic/features/search/search_screen.dart';
@@ -34,6 +40,32 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/now-playing',
         builder: (context, state) => const NowPlayingScreen(),
+      ),
+      GoRoute(
+        path: '/library',
+        builder: (context, state) => const LibraryHubScreen(),
+      ),
+      GoRoute(
+        path: '/library/liked',
+        builder: (context, state) => const LikedSongsScreen(),
+      ),
+      GoRoute(
+        path: '/library/playlists',
+        builder: (context, state) => const PlaylistsScreen(),
+      ),
+      GoRoute(
+        path: '/library/playlists/:id',
+        builder: (context, state) => PlaylistDetailScreen(
+          browseId: state.pathParameters['id']!,
+        ),
+      ),
+      GoRoute(
+        path: '/library/subscriptions',
+        builder: (context, state) => const SubscriptionsScreen(),
+      ),
+      GoRoute(
+        path: '/library/history',
+        builder: (context, state) => const HistoryScreen(),
       ),
     ],
   );
