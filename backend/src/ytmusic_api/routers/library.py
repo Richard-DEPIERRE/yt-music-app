@@ -9,8 +9,10 @@ from ..models.catalog import Thumbnail
 from ..models.library import (
     LikedSong,
     LikedSongsResponse,
+    PlaylistDetailResponse,
     PlaylistsResponse,
     PlaylistSummary,
+    PlaylistTrack,
 )
 from ..services.ytmusic_client import YTMusicClient
 
@@ -99,3 +101,54 @@ async def get_playlists(request: Request) -> PlaylistsResponse:
         raise HTTPException(status_code=502, detail=f"upstream: {exc}") from exc
     items = [n for n in (_normalise_playlist_summary(p) for p in raw) if n is not None]
     return PlaylistsResponse(items=items, continuation=None)
+
+
+def _normalise_playlist_track(raw: dict[str, Any]) -> PlaylistTrack | None:
+    video_id = raw.get("videoId")
+    if not video_id:
+        return None
+    artist_name = _track_artist_name(raw)
+    album_name, album_bid = _track_album(raw)
+    duration_seconds = raw.get("duration_seconds")
+    return PlaylistTrack(
+        videoId=video_id,
+        setVideoId=raw.get("setVideoId"),
+        title=raw.get("title", ""),
+        artistName=artist_name,
+        albumName=album_name,
+        albumBrowseId=album_bid,
+        durationMs=None if duration_seconds is None else int(duration_seconds * 1000),
+        thumbnail=_last_thumb(raw),
+    )
+
+
+@router.get(
+    "/library/playlists/{playlist_id}", response_model=PlaylistDetailResponse
+)
+async def get_playlist_detail(
+    request: Request,
+    playlist_id: str,
+    continuation: str | None = Query(None),
+) -> PlaylistDetailResponse:
+    ytm: YTMusicClient = request.app.state.ytmusic_client
+    # `continuation` reserved for future use; ytmusicapi handles paging via limit.
+    try:
+        raw = await ytm.get_playlist(playlist_id, limit=500)
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail=f"playlist not found: {exc}") from exc
+
+    tracks = raw.get("tracks") or []
+    items = [
+        n for n in (_normalise_playlist_track(t) for t in tracks) if n is not None
+    ]
+    author = raw.get("author") or {}
+    owner = author.get("name") if isinstance(author, dict) else author
+    return PlaylistDetailResponse(
+        browseId=raw.get("id", playlist_id),
+        title=raw.get("title", ""),
+        description=raw.get("description"),
+        ownerName=owner,
+        trackCount=raw.get("trackCount") or len(items),
+        items=items,
+        continuation=None,
+    )

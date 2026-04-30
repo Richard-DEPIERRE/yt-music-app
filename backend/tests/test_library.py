@@ -152,3 +152,55 @@ def test_playlists_skips_items_missing_id(library_client, fake_ytm):
     fake_ytm.playlists_payload = [bad, _playlist_summary("PL2")]
     r = library_client.get("/v1/library/playlists")
     assert [p["browseId"] for p in r.json()["items"]] == ["PL2"]
+
+
+def _playlist_track(video_id: str, set_id: str = "set", **extra) -> dict[str, Any]:
+    base: dict[str, Any] = {
+        "videoId": video_id,
+        "setVideoId": set_id,
+        "title": "Track",
+        "artists": [{"name": "Artist", "id": "UCabc"}],
+        "album": {"name": "Album", "id": "MPRabc"},
+        "duration_seconds": 200,
+        "thumbnails": [{"url": "https://t/p.jpg", "width": 60, "height": 60}],
+    }
+    base.update(extra)
+    return base
+
+
+def test_playlist_detail_returns_normalised(library_client, fake_ytm):
+    fake_ytm.playlist_payloads["PL1"] = {
+        "id": "PL1",
+        "title": "Mix",
+        "description": "d",
+        "author": {"name": "Me"},
+        "trackCount": 2,
+        "tracks": [_playlist_track("v1", "s1"), _playlist_track("v2", "s2")],
+    }
+    r = library_client.get("/v1/library/playlists/PL1")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["browseId"] == "PL1"
+    assert body["title"] == "Mix"
+    assert body["ownerName"] == "Me"
+    assert body["trackCount"] == 2
+    assert [t["setVideoId"] for t in body["items"]] == ["s1", "s2"]
+    assert body["items"][0]["videoId"] == "v1"
+    assert body["continuation"] is None
+
+
+def test_playlist_detail_404_when_not_found(library_client, fake_ytm):
+    r = library_client.get("/v1/library/playlists/NOPE")
+    assert r.status_code == 404
+
+
+def test_playlist_detail_skips_tracks_without_videoid(library_client, fake_ytm):
+    bad = _playlist_track("v1", "s1")
+    bad["videoId"] = None
+    fake_ytm.playlist_payloads["PL1"] = {
+        "id": "PL1",
+        "title": "Mix",
+        "tracks": [bad, _playlist_track("v2", "s2")],
+    }
+    r = library_client.get("/v1/library/playlists/PL1")
+    assert [t["videoId"] for t in r.json()["items"]] == ["v2"]
