@@ -20,7 +20,8 @@ services:
     container_name: yt-music-api
     restart: unless-stopped
     depends_on:
-      - pot-provider
+      pot-provider:
+        condition: service_healthy
     environment:
       YT_HEADERS_PATH: /secrets/yt_headers.json
       POT_PROVIDER_URL: http://pot-provider:4416
