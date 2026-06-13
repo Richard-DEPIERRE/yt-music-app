@@ -33,13 +33,15 @@ class DownloadCoordinator {
   /// after `reconcile()`.
   void start() {
     _eventSub = _gateway.events.listen(_onEvent);
-    _queueSub = _repo.watchQueued().listen((_) => unawaited(processQueueOnce()));
+    _queueSub = _repo
+        .watchQueued()
+        .listen((_) => unawaited(processQueueOnce()));
   }
 
   /// Convenience method called at app launch: configure gateway, reconcile
   /// orphans, start watching, then do a first pass.
   Future<void> configureGatewayAndStart() async {
-    await _gateway.configure(maxConcurrent: 3);
+    await _gateway.configure();
     await reconcile();
     start();
     await processQueueOnce();

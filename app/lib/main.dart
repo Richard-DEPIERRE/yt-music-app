@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +8,7 @@ import 'package:ytmusic/app.dart';
 import 'package:ytmusic/core/api/api_providers.dart';
 import 'package:ytmusic/core/audio/audio_handler.dart';
 import 'package:ytmusic/core/audio/audio_providers.dart';
+import 'package:ytmusic/core/downloads/download_providers.dart';
 import 'package:ytmusic/core/settings/settings_providers.dart';
 import 'package:ytmusic/core/settings/settings_repository.dart';
 
@@ -38,6 +41,9 @@ Future<void> main() async {
     overrides: [audioHandlerProvider.overrideWithValue(handler)],
   );
   container.read(apiConfigProvider.notifier).state = initialConfig;
+  unawaited(
+    container.read(downloadCoordinatorProvider).configureGatewayAndStart(),
+  );
 
   runApp(
     UncontrolledProviderScope(
