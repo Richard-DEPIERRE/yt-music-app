@@ -18,9 +18,19 @@ class AudioPlaybackHandler extends BaseAudioHandler {
   final ApiClientFactory apiClientFactory;
   Track? _currentTrack;
 
+  final List<Track> _queue = [];
+  int _index = 0;
+
+  String? get currentVideoId => _currentTrack?.videoId;
+
   void _wirePlayerEvents() {
     _player.playbackEventStream.listen((event) {
       playbackState.add(_toState(event));
+    });
+    _player.processingStateStream.listen((state) {
+      if (state == ProcessingState.completed) {
+        skipToNext();
+      }
     });
   }
 
@@ -38,7 +48,7 @@ class AudioPlaybackHandler extends BaseAudioHandler {
       updatePosition: event.updatePosition,
       bufferedPosition: event.bufferedPosition,
       speed: _player.speed,
-      queueIndex: 0,
+      queueIndex: _index,
     );
   }
 
@@ -65,6 +75,19 @@ class AudioPlaybackHandler extends BaseAudioHandler {
     return api;
   }
 
+  MediaItem _toMediaItem(Track track) => MediaItem(
+        id: track.videoId,
+        title: track.title,
+        artist: track.artistName,
+        album: track.albumName,
+        duration: track.durationMs > 0
+            ? Duration(milliseconds: track.durationMs)
+            : null,
+        artUri: track.thumbnail != null
+            ? Uri.parse(track.thumbnail!.url)
+            : null,
+      );
+
   Future<void> playTrack(Track track) async {
     _currentTrack = track;
     final api = _requireApi();
@@ -72,17 +95,64 @@ class AudioPlaybackHandler extends BaseAudioHandler {
     // -11828 "Cannot Open"). AAC-in-M4A plays on both iOS and Android. The
     // backend will fall back to whatever's available if AAC isn't served.
     final info = await api.resolveStream(track.videoId, codec: 'aac');
-    final item = MediaItem(
-      id: track.videoId,
-      title: track.title,
-      artist: track.artistName,
-      album: track.albumName,
-      duration: Duration(milliseconds: track.durationMs),
-      artUri: track.thumbnail != null ? Uri.parse(track.thumbnail!.url) : null,
-    );
-    mediaItem.add(item);
+    mediaItem.add(_toMediaItem(track));
     await _player.setAudioSource(AudioSource.uri(Uri.parse(info.url)));
     await _player.play();
+  }
+
+  Future<void> setQueue(
+    List<Track> tracks, {
+    int startIndex = 0,
+  }) async {
+    _queue
+      ..clear()
+      ..addAll(tracks);
+    _index = tracks.isEmpty
+        ? 0
+        : startIndex.clamp(0, tracks.length - 1);
+    queue.add(_queue.map(_toMediaItem).toList());
+    if (_queue.isNotEmpty) {
+      await playTrack(_queue[_index]);
+    }
+  }
+
+  Future<void> playTrackWithAutoplay(Track track) async {
+    await setQueue([track]);
+    try {
+      final api = _requireApi();
+      final next = await api.getUpNext(track.videoId);
+      final followOn = next
+          .where((q) => q.videoId != track.videoId)
+          .map((q) => q.toTrack())
+          .toList();
+      if (followOn.isNotEmpty) {
+        _queue.addAll(followOn);
+        queue.add(_queue.map(_toMediaItem).toList());
+      }
+    } on Object catch (_) {
+      // Autoplay is best-effort; failure just means no follow-on tracks.
+    }
+  }
+
+  @override
+  Future<void> skipToNext() async {
+    if (_index + 1 >= _queue.length) return;
+    _index += 1;
+    await playTrack(_queue[_index]);
+  }
+
+  @override
+  Future<void> skipToPrevious() async {
+    if (_index <= 0) return;
+    _index -= 1;
+    await playTrack(_queue[_index]);
+  }
+
+  @override
+  Future<void> skipToQueueItem(int index) async {
+    if (index < 0 || index >= _queue.length) return;
+    _index = index;
+    await playTrack(_queue[_index]);
   }
 
   /// Re-resolve the current track's stream URL and resume from the last
