@@ -1,0 +1,26 @@
+{
+  // The Flutter app lives in app/; point the Dart/Flutter extension at the
+  // fvm symlink so VS Code uses the same SDK as the `fvm flutter` CLI (3.41.0,
+  // pinned in app/.fvmrc). Using the symlink (not a versioned path) means this
+  // keeps working if the pinned version changes.
+  "dart.flutterSdkPath": "app/.fvm/flutter_sdk",
+  "dart.flutterSdkPaths": [
+    "/Users/richarddepierre/fvm/versions"
+  ],
+  "search.exclude": {
+    "**/.fvm": true
+  },
+  "files.watcherExclude": {
+    "**/.fvm": true
+  },
+  "dart.lineLength": 80,
+  "[dart]": {
+    "editor.formatOnSave": true,
+    "editor.rulers": [
+      80
+    ],
+    "editor.selectionHighlight": false,
+    "editor.tabCompletion": "onlySnippets",
+    "editor.wordBasedSuggestions": "off"
+  }
+}
