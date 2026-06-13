@@ -78,6 +78,13 @@ class YTMusicClient:
 
         return await asyncio.to_thread(_call)
 
+    async def get_home(self, *, limit: int = 5) -> list[dict[str, Any]]:
+        def _call() -> list[dict[str, Any]]:
+            client = self._build()
+            return client.get_home(limit=limit)
+
+        return await asyncio.to_thread(_call)
+
     async def get_watch_playlist(
         self,
         *,

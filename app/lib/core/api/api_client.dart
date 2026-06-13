@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:ytmusic/core/api/api_config.dart';
 import 'package:ytmusic/core/api/models/album_detail.dart';
 import 'package:ytmusic/core/api/models/artist_detail.dart';
+import 'package:ytmusic/core/api/models/home_feed.dart';
 import 'package:ytmusic/core/api/models/library_models.dart';
 import 'package:ytmusic/core/api/models/queue_item.dart';
 import 'package:ytmusic/core/api/models/search_result.dart';
@@ -261,6 +262,20 @@ class ApiClient {
       );
       return (res.data!['items'] as List)
           .map((e) => QueueItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      throw ApiException(
+        e.response?.statusCode ?? 0,
+        e.message ?? 'Network error',
+      );
+    }
+  }
+
+  Future<List<HomeSection>> getHome() async {
+    try {
+      final res = await dio.get<Map<String, dynamic>>('/v1/home');
+      return (res.data!['sections'] as List)
+          .map((e) => HomeSection.fromJson(e as Map<String, dynamic>))
           .toList();
     } on DioException catch (e) {
       throw ApiException(

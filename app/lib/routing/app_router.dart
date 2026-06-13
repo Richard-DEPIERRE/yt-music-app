@@ -5,6 +5,7 @@ import 'package:ytmusic/core/settings/settings_providers.dart';
 import 'package:ytmusic/features/album/album_detail_screen.dart';
 import 'package:ytmusic/features/artist/artist_detail_screen.dart';
 import 'package:ytmusic/features/health/health_screen.dart';
+import 'package:ytmusic/features/home/home_screen.dart';
 import 'package:ytmusic/features/library/history_screen.dart';
 import 'package:ytmusic/features/library/library_hub_screen.dart';
 import 'package:ytmusic/features/library/liked_songs_screen.dart';
@@ -17,19 +18,23 @@ import 'package:ytmusic/features/search/search_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/search',
+    initialLocation: '/home',
     redirect: (context, state) {
       final config = ref.read(apiConfigProvider);
       final configured = config != null && config.isComplete;
       final goingToOnboarding = state.matchedLocation == '/onboarding';
       if (!configured && !goingToOnboarding) return '/onboarding';
-      if (configured && goingToOnboarding) return '/search';
+      if (configured && goingToOnboarding) return '/home';
       return null;
     },
     routes: [
       GoRoute(
         path: '/onboarding',
         builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: '/home',
+        builder: (context, state) => const HomeScreen(),
       ),
       GoRoute(
         path: '/search',

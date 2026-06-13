@@ -123,3 +123,55 @@ def test_up_next_caches_per_video_and_radio_flag(disco_client, fake_ytm):
     # different radio flag is a distinct cache entry → second upstream call
     disco_client.get("/v1/up-next?videoId=v0&radio=false")
     assert fake_ytm.watch_calls == 2
+
+
+def test_home_returns_sections_with_typed_items(disco_client, fake_ytm):
+    fake_ytm.home_payload = [
+        {
+            "title": "Quick picks",
+            "contents": [
+                {
+                    "title": "Gravity",
+                    "videoId": "EludZd6lfts",
+                    "artists": [{"name": "yetep", "id": "UCx"}],
+                    "thumbnails": [{"url": "https://t/s.jpg", "width": 60, "height": 60}],
+                },
+                {
+                    "title": "Sentiment",
+                    "browseId": "MPREb_QtqXtd2xZMR",
+                    "thumbnails": [{"url": "https://t/al.jpg", "width": 226, "height": 226}],
+                },
+                {
+                    "title": "r/EDM top",
+                    "playlistId": "PLz7",
+                    "thumbnails": [],
+                },
+                {
+                    "title": "Chill Satellite",
+                    "browseId": "UCrPLFBWdOroD57bkqPbZJog",
+                    "subscribers": "374",
+                    "thumbnails": [],
+                },
+            ],
+        }
+    ]
+    r = disco_client.get("/v1/home")
+    assert r.status_code == 200
+    sections = r.json()["sections"]
+    assert sections[0]["title"] == "Quick picks"
+    items = sections[0]["items"]
+    kinds = [it["kind"] for it in items]
+    assert kinds == ["song", "album", "playlist", "artist"]
+    assert items[0]["videoId"] == "EludZd6lfts"
+    assert items[0]["artistName"] == "yetep"
+    assert items[1]["browseId"] == "MPREb_QtqXtd2xZMR"
+    assert items[2]["playlistId"] == "PLz7"
+    assert items[3]["kind"] == "artist"
+
+
+def test_home_is_cached(disco_client, fake_ytm):
+    fake_ytm.home_payload = [{"title": "X", "contents": []}]
+    disco_client.get("/v1/home")
+    fake_ytm.home_payload = [{"title": "CHANGED", "contents": []}]
+    r = disco_client.get("/v1/home")
+    assert r.json()["sections"] == []  # served from cache (empty — no classifiable items)
