@@ -3,6 +3,7 @@ import 'package:ytmusic/core/api/api_config.dart';
 import 'package:ytmusic/core/api/models/album_detail.dart';
 import 'package:ytmusic/core/api/models/artist_detail.dart';
 import 'package:ytmusic/core/api/models/library_models.dart';
+import 'package:ytmusic/core/api/models/queue_item.dart';
 import 'package:ytmusic/core/api/models/search_result.dart';
 import 'package:ytmusic/core/api/models/stream_info.dart';
 import 'package:ytmusic/core/api/models/track.dart';
@@ -224,6 +225,43 @@ class ApiClient {
       final res =
           await dio.get<Map<String, dynamic>>('/v1/artist/$browseId');
       return ArtistDetail.fromJson(res.data!);
+    } on DioException catch (e) {
+      throw ApiException(
+        e.response?.statusCode ?? 0,
+        e.message ?? 'Network error',
+      );
+    }
+  }
+
+  Future<List<QueueItem>> getRadio(String seedVideoId) async {
+    try {
+      final res = await dio.get<Map<String, dynamic>>(
+        '/v1/radio',
+        queryParameters: {'seedVideoId': seedVideoId},
+      );
+      return (res.data!['items'] as List)
+          .map((e) => QueueItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      throw ApiException(
+        e.response?.statusCode ?? 0,
+        e.message ?? 'Network error',
+      );
+    }
+  }
+
+  Future<List<QueueItem>> getUpNext(
+    String videoId, {
+    bool radio = false,
+  }) async {
+    try {
+      final res = await dio.get<Map<String, dynamic>>(
+        '/v1/up-next',
+        queryParameters: {'videoId': videoId, 'radio': radio},
+      );
+      return (res.data!['items'] as List)
+          .map((e) => QueueItem.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw ApiException(
         e.response?.statusCode ?? 0,
