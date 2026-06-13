@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,11 +12,11 @@ import 'package:ytmusic/features/home/home_controller.dart';
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
-  void _onTap(BuildContext context, WidgetRef ref, HomeItem it) {
+  Future<void> _onTap(BuildContext context, WidgetRef ref, HomeItem it) async {
     switch (it.kind) {
       case 'song':
         if (it.videoId == null) return;
-        ref.read(audioHandlerProvider).playTrackWithAutoplay(
+        await ref.read(audioHandlerProvider).playTrackWithAutoplay(
               Track(
                 videoId: it.videoId!,
                 title: it.title,
@@ -23,14 +25,18 @@ class HomeScreen extends ConsumerWidget {
                 thumbnail: it.thumbnail,
               ),
             );
-        context.push('/now-playing');
+        if (context.mounted) unawaited(context.push<void>('/now-playing'));
       case 'album':
-        if (it.browseId != null) context.push('/albums/${it.browseId}');
+        if (it.browseId != null) {
+          unawaited(context.push<void>('/albums/${it.browseId}'));
+        }
       case 'artist':
-        if (it.browseId != null) context.push('/artists/${it.browseId}');
+        if (it.browseId != null) {
+          unawaited(context.push<void>('/artists/${it.browseId}'));
+        }
       case 'playlist':
         if (it.playlistId != null) {
-          context.push('/library/playlists/${it.playlistId}');
+          unawaited(context.push<void>('/library/playlists/${it.playlistId}'));
         }
     }
   }
