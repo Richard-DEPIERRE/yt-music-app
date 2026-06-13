@@ -20,3 +20,8 @@ final playbackStateStreamProvider = StreamProvider<PlaybackState>(
   (ref) => ref.watch(audioHandlerProvider).playbackState,
   dependencies: [audioHandlerProvider],
 );
+
+final queueStreamProvider = StreamProvider<List<MediaItem>>(
+  (ref) => ref.watch(audioHandlerProvider).queue,
+  dependencies: [audioHandlerProvider],
+);

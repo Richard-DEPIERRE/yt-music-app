@@ -37,7 +37,7 @@ class _PlaylistDetailScreenState
   }
 
   Future<void> _play(Track t) async {
-    await ref.read(audioHandlerProvider).playTrack(
+    await ref.read(audioHandlerProvider).playTrackWithAutoplay(
           wire.Track(
             videoId: t.videoId,
             title: t.title,

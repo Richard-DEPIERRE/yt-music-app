@@ -14,6 +14,8 @@ void main() {
     final player = _MockPlayer();
     when(() => player.playbackEventStream)
         .thenAnswer((_) => const Stream.empty());
+    when(() => player.processingStateStream)
+        .thenAnswer((_) => const Stream.empty());
     when(() => player.positionStream)
         .thenAnswer((_) => const Stream.empty());
     when(() => player.bufferedPositionStream)
