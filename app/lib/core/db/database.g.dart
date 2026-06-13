@@ -3965,6 +3965,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SettingsTable settings = $SettingsTable(this);
   late final AlbumsDao albumsDao = AlbumsDao(this as AppDatabase);
   late final ArtistsDao artistsDao = ArtistsDao(this as AppDatabase);
+  late final DownloadsDao downloadsDao = DownloadsDao(this as AppDatabase);
   late final PlaylistsDao playlistsDao = PlaylistsDao(this as AppDatabase);
   late final RecentlyPlayedDao recentlyPlayedDao = RecentlyPlayedDao(
     this as AppDatabase,
