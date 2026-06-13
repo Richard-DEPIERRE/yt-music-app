@@ -129,3 +129,15 @@ async def test_resolver_returns_resolved_stream(monkeypatch):
         v for vs in extractor_args["youtube"].values() for v in vs
     ]
     assert any("pot:4416" in v for v in pot_values)
+
+
+def test_resolved_stream_has_artwork_url():
+    from ytmusic_api.services.stream_resolver import _best_thumbnail
+
+    thumbnails = [
+        {"url": "https://img/small.jpg", "width": 120, "height": 120},
+        {"url": "https://img/big.jpg", "width": 600, "height": 600},
+    ]
+    assert _best_thumbnail(thumbnails) == "https://img/big.jpg"
+    assert _best_thumbnail([]) is None
+    assert _best_thumbnail(None) is None
