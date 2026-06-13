@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:ytmusic/app.dart';
 import 'package:ytmusic/core/api/api_providers.dart';
 import 'package:ytmusic/core/audio/audio_handler.dart';
 import 'package:ytmusic/core/audio/audio_providers.dart';
+import 'package:ytmusic/core/db/db_providers.dart';
 import 'package:ytmusic/core/downloads/download_providers.dart';
 import 'package:ytmusic/core/settings/settings_providers.dart';
 import 'package:ytmusic/core/settings/settings_repository.dart';
@@ -24,6 +26,22 @@ Future<void> main() async {
   final handler = await AudioService.init(
     builder: () => AudioPlaybackHandler(
       apiClientFactory: () => container.read(apiClientProvider),
+      localFileFor: (videoId) async {
+        final row = await container
+            .read(appDatabaseProvider)
+            .tracksDao
+            .getById(videoId);
+        if (row?.downloadStatus == 'downloaded' && row?.localPath != null) {
+          return File(row!.localPath!).existsSync() ? row.localPath : null;
+        }
+        return null;
+      },
+      onPlayed: (videoId) {
+        container
+            .read(appDatabaseProvider)
+            .tracksDao
+            .touchLastPlayed(videoId);
+      },
     ),
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'com.richarddepierre.ytmusic.audio',

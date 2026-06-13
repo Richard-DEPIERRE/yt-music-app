@@ -12,12 +12,38 @@ class AudioPlaybackHandler extends BaseAudioHandler {
   AudioPlaybackHandler({
     required this.apiClientFactory,
     AudioPlayer? player,
+    this.localFileFor,
+    this.onPlayed,
   }) : _player = player ?? AudioPlayer() {
     _wirePlayerEvents();
   }
 
   final AudioPlayer _player;
   final ApiClientFactory apiClientFactory;
+
+  /// Optional callback that returns the local file path for a given videoId,
+  /// or null if no local file is available.
+  final Future<String?> Function(String videoId)? localFileFor;
+
+  /// Optional callback invoked after a track source has been set, with the
+  /// videoId of the track that started playing. Used to update lastPlayedAt.
+  final void Function(String videoId)? onPlayed;
+
+  /// Chooses the audio source URI for [videoId].
+  ///
+  /// If [localFileFor] returns a non-null path, returns a `file://` URI for
+  /// that path. Otherwise calls [resolveStreamUrl] and returns its result.
+  static Future<String> chooseSource({
+    required String videoId,
+    required Future<String?> Function(String) localFileFor,
+    required Future<String> Function(String) resolveStreamUrl,
+  }) async {
+    final localPath = await localFileFor(videoId);
+    if (localPath != null) {
+      return Uri.file(localPath).toString();
+    }
+    return resolveStreamUrl(videoId);
+  }
   Track? _currentTrack;
 
   final List<Track> _queue = [];
@@ -98,10 +124,16 @@ class AudioPlaybackHandler extends BaseAudioHandler {
     // iOS' AVPlayer cannot natively decode Opus-in-WebM (PlatformException
     // -11828 "Cannot Open"). AAC-in-M4A plays on both iOS and Android. The
     // backend will fall back to whatever's available if AAC isn't served.
-    final info = await api.resolveStream(track.videoId, codec: 'aac');
+    final url = await chooseSource(
+      videoId: track.videoId,
+      localFileFor: localFileFor ?? (_) async => null,
+      resolveStreamUrl: (id) async =>
+          (await api.resolveStream(id, codec: 'aac')).url,
+    );
     mediaItem.add(_toMediaItem(track));
-    await _player.setAudioSource(AudioSource.uri(Uri.parse(info.url)));
+    await _player.setAudioSource(AudioSource.uri(Uri.parse(url)));
     await _player.play();
+    onPlayed?.call(track.videoId);
   }
 
   Future<void> setQueue(

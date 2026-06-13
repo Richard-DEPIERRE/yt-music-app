@@ -42,4 +42,9 @@ class TracksDao extends DatabaseAccessor<AppDatabase> with _$TracksDaoMixin {
       ]);
     return q.watch();
   }
+
+  Future<void> touchLastPlayed(String videoId) =>
+      (update(tracks)..where((t) => t.videoId.equals(videoId))).write(
+        TracksCompanion(lastPlayedAt: Value(DateTime.now())),
+      );
 }
