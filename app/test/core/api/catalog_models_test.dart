@@ -41,10 +41,20 @@ void main() {
       'thumbnail': {'url': 'https://t/ar.jpg', 'width': 540, 'height': 540},
       'radioId': 'RDEMabc',
       'topSongs': [
-        {'videoId': 's1', 'title': 'Wonderwall', 'albumName': 'MG', 'thumbnail': null},
+        {
+          'videoId': 's1',
+          'title': 'Wonderwall',
+          'albumName': 'MG',
+          'thumbnail': null,
+        },
       ],
       'albums': [
-        {'browseId': 'MPREb_AY', 'title': 'Familiar', 'year': 2018, 'thumbnail': null},
+        {
+          'browseId': 'MPREb_AY',
+          'title': 'Familiar',
+          'year': 2018,
+          'thumbnail': null,
+        },
       ],
       'singles': <Map<String, dynamic>>[],
     };

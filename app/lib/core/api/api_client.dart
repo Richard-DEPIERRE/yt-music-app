@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:ytmusic/core/api/api_config.dart';
+import 'package:ytmusic/core/api/models/album_detail.dart';
+import 'package:ytmusic/core/api/models/artist_detail.dart';
 import 'package:ytmusic/core/api/models/library_models.dart';
 import 'package:ytmusic/core/api/models/search_result.dart';
 import 'package:ytmusic/core/api/models/stream_info.dart';
@@ -196,6 +198,32 @@ class ApiClient {
       final res =
           await dio.get<Map<String, dynamic>>('/v1/library/history');
       return PagedHistory.fromJson(res.data!);
+    } on DioException catch (e) {
+      throw ApiException(
+        e.response?.statusCode ?? 0,
+        e.message ?? 'Network error',
+      );
+    }
+  }
+
+  Future<AlbumDetail> getAlbum(String browseId) async {
+    try {
+      final res =
+          await dio.get<Map<String, dynamic>>('/v1/album/$browseId');
+      return AlbumDetail.fromJson(res.data!);
+    } on DioException catch (e) {
+      throw ApiException(
+        e.response?.statusCode ?? 0,
+        e.message ?? 'Network error',
+      );
+    }
+  }
+
+  Future<ArtistDetail> getArtist(String browseId) async {
+    try {
+      final res =
+          await dio.get<Map<String, dynamic>>('/v1/artist/$browseId');
+      return ArtistDetail.fromJson(res.data!);
     } on DioException catch (e) {
       throw ApiException(
         e.response?.statusCode ?? 0,
