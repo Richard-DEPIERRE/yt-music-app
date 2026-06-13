@@ -11,6 +11,8 @@ class QueueSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final queue = ref.watch(queueStreamProvider);
     final handler = ref.watch(audioHandlerProvider);
+    final sheetHeight = MediaQuery.of(context).size.height * 0.6;
+
     return queue.when(
       loading: () => const SizedBox(
         height: 120,
@@ -20,22 +22,41 @@ class QueueSheet extends ConsumerWidget {
         height: 120,
         child: Center(child: Text('$e')),
       ),
-      data: (List<MediaItem> items) => ListView.builder(
-        shrinkWrap: true,
-        itemCount: items.length,
-        itemBuilder: (ctx, i) {
-          final it = items[i];
-          return ListTile(
-            title: Text(
-              it.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            subtitle: it.artist == null ? null : Text(it.artist!),
-            onTap: () => handler.skipToQueueItem(i),
+      data: (List<MediaItem> items) {
+        if (items.isEmpty) {
+          return const SizedBox(
+            height: 120,
+            child: Center(child: Text('Nothing queued')),
           );
-        },
-      ),
+        }
+        return SizedBox(
+          height: sheetHeight,
+          child: ListView.builder(
+            itemCount: items.length,
+            itemBuilder: (ctx, i) {
+              final it = items[i];
+              return ListTile(
+                title: Text(
+                  it.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: it.artist == null
+                    ? null
+                    : Text(
+                        it.artist!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                onTap: () {
+                  handler.skipToQueueItem(i);
+                  Navigator.of(context).pop();
+                },
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

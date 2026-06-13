@@ -24,6 +24,7 @@ class NowPlayingScreen extends ConsumerWidget {
             icon: const Icon(Icons.queue_music),
             onPressed: () => showModalBottomSheet<void>(
               context: context,
+              isScrollControlled: true,
               builder: (_) => const QueueSheet(),
             ),
           ),
