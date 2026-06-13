@@ -48,6 +48,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         if (r.browseId != null) {
           unawaited(context.push<void>('/artists/${r.browseId}'));
         }
+      case 'playlist':
+        if (r.browseId != null) {
+          unawaited(context.push<void>('/library/playlists/${r.browseId}'));
+        }
     }
   }
 
