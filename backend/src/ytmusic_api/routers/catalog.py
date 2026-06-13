@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -17,6 +18,8 @@ from ..models.catalog import (
 )
 from ..services.cache import TtlCache
 from ..services.ytmusic_client import YTMusicClient
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -149,6 +152,7 @@ async def get_album(request: Request, browse_id: str) -> AlbumDetailResponse:
     try:
         raw = await ytm.get_album(browse_id)
     except Exception as exc:
+        logger.exception("get_album upstream error (browse_id=%s)", browse_id)
         raise HTTPException(status_code=404, detail=f"album not found: {exc}") from exc
 
     artist_name, artist_bid = _first_artist(raw)
@@ -161,7 +165,7 @@ async def get_album(request: Request, browse_id: str) -> AlbumDetailResponse:
         artistName=artist_name,
         artistBrowseId=artist_bid,
         year=_parse_year(raw.get("year")),
-        trackCount=raw.get("trackCount") or len(items),
+        trackCount=raw.get("trackCount") if raw.get("trackCount") is not None else len(items),
         thumbnail=Thumbnail(**thumbs[-1]) if thumbs else None,
         audioPlaylistId=raw.get("audioPlaylistId"),
         items=items,
@@ -211,6 +215,7 @@ async def get_artist(request: Request, browse_id: str) -> ArtistDetailResponse:
     try:
         raw = await ytm.get_artist(browse_id)
     except Exception as exc:
+        logger.exception("get_artist upstream error (browse_id=%s)", browse_id)
         raise HTTPException(status_code=404, detail=f"artist not found: {exc}") from exc
 
     songs = (raw.get("songs") or {}).get("results") or []

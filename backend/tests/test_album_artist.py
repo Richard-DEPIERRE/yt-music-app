@@ -15,6 +15,7 @@ class _FakeYTMusic(YTMusicClient):  # type: ignore[misc]
         self.album_payloads: dict[str, dict[str, Any]] = {}
         self.artist_payloads: dict[str, dict[str, Any]] = {}
         self.album_calls = 0
+        self.artist_calls = 0
 
     async def get_album(self, browse_id):  # type: ignore[override]
         self.album_calls += 1
@@ -23,6 +24,7 @@ class _FakeYTMusic(YTMusicClient):  # type: ignore[misc]
         return self.album_payloads[browse_id]
 
     async def get_artist(self, channel_id):  # type: ignore[override]
+        self.artist_calls += 1
         if channel_id not in self.artist_payloads:
             raise RuntimeError("not found")
         return self.artist_payloads[channel_id]
@@ -176,3 +178,10 @@ def test_artist_returns_normalised_detail(catalog_client, fake_ytm):
 def test_artist_404_when_not_found(catalog_client, fake_ytm):
     r = catalog_client.get("/v1/artist/missing")
     assert r.status_code == 404
+
+
+def test_artist_caches_per_browseid(catalog_client, fake_ytm):
+    fake_ytm.artist_payloads["UCabc"] = _artist_payload()
+    catalog_client.get("/v1/artist/UCabc")
+    catalog_client.get("/v1/artist/UCabc")
+    assert fake_ytm.artist_calls == 1
