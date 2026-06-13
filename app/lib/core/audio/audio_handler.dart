@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -20,6 +22,7 @@ class AudioPlaybackHandler extends BaseAudioHandler {
 
   final List<Track> _queue = [];
   int _index = 0;
+  bool _isAdvancing = false;
 
   String? get currentVideoId => _currentTrack?.videoId;
 
@@ -28,8 +31,9 @@ class AudioPlaybackHandler extends BaseAudioHandler {
       playbackState.add(_toState(event));
     });
     _player.processingStateStream.listen((state) {
-      if (state == ProcessingState.completed) {
-        skipToNext();
+      if (state == ProcessingState.completed && !_isAdvancing) {
+        _isAdvancing = true;
+        unawaited(skipToNext().whenComplete(() => _isAdvancing = false));
       }
     });
   }

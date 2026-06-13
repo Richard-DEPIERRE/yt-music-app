@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:mocktail/mocktail.dart';
@@ -15,11 +17,15 @@ class _FakeAudioSource extends Fake implements AudioSource {}
 
 /// Stubs the [player] with the minimum mocks required to construct an
 /// AudioPlaybackHandler and to call playTrack.
-void _stubPlayer(_MockPlayer player, _MockApi api) {
+void _stubPlayer(
+  _MockPlayer player,
+  _MockApi api, {
+  Stream<ProcessingState>? stateStream,
+}) {
   when(() => player.playbackEventStream)
       .thenAnswer((_) => const Stream.empty());
   when(() => player.processingStateStream)
-      .thenAnswer((_) => const Stream.empty());
+      .thenAnswer((_) => stateStream ?? const Stream.empty());
   when(() => player.positionStream)
       .thenAnswer((_) => const Stream.empty());
   when(() => player.bufferedPositionStream)
@@ -51,12 +57,14 @@ void _stubPlayer(_MockPlayer player, _MockApi api) {
 
 /// Creates a handler where getUpNext returns [upNext].
 /// If [upNext] is null the method is not stubbed (will throw if called).
+/// Pass [stateStream] to control the player's processingStateStream.
 AudioPlaybackHandler makeHandler({
   List<QueueItem>? upNext,
+  Stream<ProcessingState>? stateStream,
 }) {
   final api = _MockApi();
   final player = _MockPlayer();
-  _stubPlayer(player, api);
+  _stubPlayer(player, api, stateStream: stateStream);
   if (upNext != null) {
     when(
       () => api.getUpNext(
@@ -222,5 +230,25 @@ void main() {
     // queue = [seed, n1, n2]
     await h.skipToNext();
     expect(h.currentVideoId, 'n1');
+  });
+
+  // ── B8: auto-advance via processingStateStream ────────────────────────────
+
+  test('auto-advance plays next track when player emits completed', () async {
+    final controller = StreamController<ProcessingState>();
+    final h = makeHandler(stateStream: controller.stream);
+    await h.setQueue([
+      Track(videoId: 'a', title: 'A', artistName: 'x', durationMs: 0),
+      Track(videoId: 'b', title: 'B', artistName: 'x', durationMs: 0),
+    ]);
+    expect(h.currentVideoId, 'a');
+
+    controller.add(ProcessingState.completed);
+    // Allow the microtask queue to flush so the async skipToNext completes.
+    await Future<void>.microtask(() {});
+    await Future<void>.microtask(() {});
+
+    expect(h.currentVideoId, 'b');
+    await controller.close();
   });
 }
