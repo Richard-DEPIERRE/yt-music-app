@@ -1,0 +1,41 @@
+name: Coverage comment
+
+# Runs after the CI workflow finishes. This workflow executes in the context of
+# the BASE repository (not the PR's fork), so it gets a writable GITHUB_TOKEN
+# even for fork PRs. It only consumes the artifact CI produced — it never checks
+# out or runs any code from the PR — so granting write access here is safe.
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  contents: read
+  pull-requests: write
+  actions: read   # needed to download the artifact from the triggering run
+
+jobs:
+  comment:
+    name: Post coverage comment
+    runs-on: ubuntu-latest
+    # Only for CI runs triggered by a pull_request.
+    if: github.event.workflow_run.event == 'pull_request'
+    steps:
+      - name: Download coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-coverage
+          path: artifact
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read PR number
+        id: pr
+        run: echo "number=$(cat artifact/pr-number.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Comment coverage on PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: backend-coverage   # one sticky comment per PR, updated in place
+          number: ${{ steps.pr.outputs.number }}
+          path: artifact/coverage-summary.md
