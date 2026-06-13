@@ -8,6 +8,16 @@ from ..auth.headers import HeadersStore
 
 logger = logging.getLogger(__name__)
 
+# Our API contract uses singular `type` values (see design spec §2.1); ytmusicapi's
+# `search(filter=...)` requires the plural form. Translate at this boundary.
+_SEARCH_FILTER_MAP = {
+    "song": "songs",
+    "album": "albums",
+    "artist": "artists",
+    "playlist": "playlists",
+    "video": "videos",
+}
+
 
 class YTMusicClient:
     """Async wrapper around ytmusicapi.YTMusic.
@@ -35,9 +45,15 @@ class YTMusicClient:
         filter_type: str | None,
         limit: int,
     ) -> list[dict[str, Any]]:
+        ytm_filter = (
+            _SEARCH_FILTER_MAP.get(filter_type, filter_type)
+            if filter_type is not None
+            else None
+        )
+
         def _call() -> list[dict[str, Any]]:
             client = self._build()
-            return client.search(query, filter=filter_type, limit=limit)
+            return client.search(query, filter=ytm_filter, limit=limit)
 
         return await asyncio.to_thread(_call)
 
