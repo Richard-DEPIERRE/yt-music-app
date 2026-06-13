@@ -52,7 +52,7 @@ class ArtistDetailScreen extends ConsumerWidget {
                 subtitle:
                     s.albumName == null ? null : Text(s.albumName!),
                 onTap: () =>
-                    ref.read(audioHandlerProvider).playTrack(
+                    ref.read(audioHandlerProvider).playTrackWithAutoplay(
                           wire.Track(
                             videoId: s.videoId,
                             title: s.title,

@@ -38,7 +38,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           albumName: r.albumName,
           durationMs: r.durationMs ?? 0,
         );
-        await ref.read(audioHandlerProvider).playTrack(track);
+        await ref.read(audioHandlerProvider).playTrackWithAutoplay(track);
         if (mounted) unawaited(context.push<void>('/now-playing'));
       case 'album':
         if (r.browseId != null) {

@@ -35,15 +35,19 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen> {
     await repo.refreshAlbum(widget.browseId);
   }
 
-  Future<void> _play(Track t) async {
-    await ref.read(audioHandlerProvider).playTrack(
-          wire.Track(
-            videoId: t.videoId,
-            title: t.title,
-            artistName: t.artistName ?? 'Unknown',
-            albumName: t.albumName,
-            durationMs: t.durationMs ?? 0,
-          ),
+  Future<void> _playFrom(List<Track> ordered, int index) async {
+    await ref.read(audioHandlerProvider).setQueue(
+          [
+            for (final t in ordered)
+              wire.Track(
+                videoId: t.videoId,
+                title: t.title,
+                artistName: t.artistName ?? 'Unknown',
+                albumName: t.albumName,
+                durationMs: t.durationMs ?? 0,
+              ),
+          ],
+          startIndex: index,
         );
   }
 
@@ -88,7 +92,7 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen> {
                       title: t.title,
                       artist: t.artistName,
                       artworkUrl: t.artworkUrl,
-                      onTap: () => _play(t),
+                      onTap: () => _playFrom(ordered, i),
                     );
                   },
                 );
