@@ -27,16 +27,32 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Future<void> _onTap(SearchResult r) async {
-    if (r.type != 'song' || r.videoId == null) return;
-    final track = Track(
-      videoId: r.videoId!,
-      title: r.title,
-      artistName: r.artistName ?? 'Unknown',
-      albumName: r.albumName,
-      durationMs: r.durationMs ?? 0,
-    );
-    await ref.read(audioHandlerProvider).playTrack(track);
-    if (mounted) unawaited(context.push<void>('/now-playing'));
+    switch (r.type) {
+      case 'song':
+      case 'video':
+        if (r.videoId == null) return;
+        final track = Track(
+          videoId: r.videoId!,
+          title: r.title,
+          artistName: r.artistName ?? 'Unknown',
+          albumName: r.albumName,
+          durationMs: r.durationMs ?? 0,
+        );
+        await ref.read(audioHandlerProvider).playTrack(track);
+        if (mounted) unawaited(context.push<void>('/now-playing'));
+      case 'album':
+        if (r.browseId != null) {
+          unawaited(context.push<void>('/albums/${r.browseId}'));
+        }
+      case 'artist':
+        if (r.browseId != null) {
+          unawaited(context.push<void>('/artists/${r.browseId}'));
+        }
+      case 'playlist':
+        if (r.browseId != null) {
+          unawaited(context.push<void>('/library/playlists/${r.browseId}'));
+        }
+    }
   }
 
   String _subtitleFor(SearchResult r) {

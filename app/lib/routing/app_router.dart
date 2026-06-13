@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:ytmusic/core/settings/settings_providers.dart';
+import 'package:ytmusic/features/album/album_detail_screen.dart';
+import 'package:ytmusic/features/artist/artist_detail_screen.dart';
 import 'package:ytmusic/features/health/health_screen.dart';
 import 'package:ytmusic/features/library/history_screen.dart';
 import 'package:ytmusic/features/library/library_hub_screen.dart';
@@ -66,6 +68,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/library/history',
         builder: (context, state) => const HistoryScreen(),
+      ),
+      GoRoute(
+        path: '/albums/:browseId',
+        builder: (context, state) => AlbumDetailScreen(
+          browseId: state.pathParameters['browseId']!,
+        ),
+      ),
+      GoRoute(
+        path: '/artists/:browseId',
+        builder: (context, state) => ArtistDetailScreen(
+          browseId: state.pathParameters['browseId']!,
+        ),
       ),
     ],
   );
