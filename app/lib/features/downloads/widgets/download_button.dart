@@ -11,6 +11,21 @@ class DownloadButton extends ConsumerWidget {
 
   final List<String> videoIds;
 
+  Future<void> _enqueue(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    try {
+      await ref.read(enqueueDownloadsProvider)(videoIds);
+    } on Object catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not start download')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final firstId = videoIds.isNotEmpty ? videoIds.first : '';
@@ -40,13 +55,13 @@ class DownloadButton extends ConsumerWidget {
         return IconButton(
           icon: const Icon(Icons.error_outline, color: Colors.redAccent),
           tooltip: 'Failed — tap to retry',
-          onPressed: () => ref.read(enqueueDownloadsProvider)(videoIds),
+          onPressed: () => _enqueue(context, ref),
         );
       default:
         return IconButton(
           icon: const Icon(Icons.download_outlined),
           tooltip: 'Download',
-          onPressed: () => ref.read(enqueueDownloadsProvider)(videoIds),
+          onPressed: () => _enqueue(context, ref),
         );
     }
   }

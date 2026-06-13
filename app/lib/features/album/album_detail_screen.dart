@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,6 +22,10 @@ class AlbumDetailScreen extends ConsumerStatefulWidget {
 
 class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen> {
   List<String> _trackVideoIds = const [];
+
+  // Cached future for track lookup — keyed by the row IDs currently shown.
+  List<String> _cachedRowIds = const [];
+  Future<List<Track>>? _tracksFuture;
 
   @override
   void initState() {
@@ -77,9 +82,15 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen> {
                 Center(child: Text('No tracks.')),
               ]);
             }
+            // Rebuild the cached future only when the set of row IDs changes.
+            final rowIds = rows.map((r) => r.videoId).toList();
+            if (!listEquals(rowIds, _cachedRowIds)) {
+              _cachedRowIds = rowIds;
+              _tracksFuture =
+                  db.tracksDao.getByIds(rowIds);
+            }
             return FutureBuilder<List<Track>>(
-              future: db.tracksDao
-                  .getByIds(rows.map((r) => r.videoId).toList()),
+              future: _tracksFuture,
               builder: (ctx, ts) {
                 final tracks = ts.data ?? const <Track>[];
                 if (tracks.isEmpty) {
@@ -97,7 +108,7 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen> {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (!mounted) return;
                   final ids = ordered.map((t) => t.videoId).toList();
-                  if (ids.length != _trackVideoIds.length) {
+                  if (!listEquals(ids, _trackVideoIds)) {
                     setState(() => _trackVideoIds = ids);
                   }
                 });

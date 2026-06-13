@@ -56,9 +56,21 @@ class DownloadsScreen extends ConsumerWidget {
                       trailing: IconButton(
                         icon: const Icon(Icons.delete_outline),
                         tooltip: 'Remove download',
-                        onPressed: () => ref
-                            .read(downloadRepositoryProvider)
-                            .removeDownload(t.videoId),
+                        onPressed: () async {
+                          try {
+                            await ref
+                                .read(downloadRepositoryProvider)
+                                .removeDownload(t.videoId);
+                          } on Object catch (_) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Could not remove download'),
+                                ),
+                              );
+                            }
+                          }
+                        },
                       ),
                     );
                   },
