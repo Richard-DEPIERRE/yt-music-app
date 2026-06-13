@@ -13,7 +13,9 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: write   # required so the coverage comment step can post/update on PRs
+  # No pull-requests: write here. Fork PRs always get a read-only token, so the
+  # coverage comment is posted by the separate coverage-comment.yml workflow,
+  # which runs in the base-repo context (via workflow_run) with write access.
 
 jobs:
   backend:
@@ -54,23 +56,24 @@ jobs:
           } > coverage-summary.md
           # Echo to job summary too (visible on push-to-main runs that have no PR).
           cat coverage-summary.md >> "$GITHUB_STEP_SUMMARY"
-          # Expose the file path so later steps can read it.
-          echo "path=backend/coverage-summary.md" >> "$GITHUB_OUTPUT"
 
-      - name: Comment coverage on PR
+      - name: Record PR number for the comment workflow
         if: always() && github.event_name == 'pull_request'
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          header: backend-coverage   # makes the comment "sticky": one per PR, updated in place
-          path: ${{ steps.coverage-md.outputs.path }}
+        run: echo "${{ github.event.pull_request.number }}" > pr-number.txt
 
       - name: Upload coverage artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: backend-coverage
-          path: backend/coverage.xml
+          # coverage-summary.md + pr-number.txt are consumed by coverage-comment.yml;
+          # coverage.xml is kept for download/inspection.
+          path: |
+            backend/coverage.xml
+            backend/coverage-summary.md
+            backend/pr-number.txt
           retention-days: 14
+          if-no-files-found: warn
 
   flutter:
     name: app (analyze + test)
