@@ -1,10 +1,12 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ytmusic/core/audio/audio_handler.dart';
 import 'package:ytmusic/core/audio/audio_providers.dart';
+import 'package:ytmusic/core/db/database.dart';
 import 'package:ytmusic/features/downloads/widgets/download_button.dart';
 import 'package:ytmusic/features/now_playing/queue_sheet.dart';
 
@@ -17,13 +19,25 @@ class NowPlayingScreen extends ConsumerWidget {
     final state = ref.watch(playbackStateStreamProvider);
     final handler = ref.watch(audioHandlerProvider);
 
-    final currentVideoId = mediaItem.valueOrNull?.id;
+    final currentItem = mediaItem.valueOrNull;
+    final currentVideoId = currentItem?.id;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Now Playing'),
         actions: [
-          if (currentVideoId != null)
-            DownloadButton(videoIds: [currentVideoId]),
+          if (currentVideoId != null && currentItem != null)
+            DownloadButton(
+              videoIds: [currentVideoId],
+              ensure: [
+                TracksCompanion.insert(
+                  videoId: currentVideoId,
+                  title: currentItem.title,
+                  artistName: Value(currentItem.artist),
+                  albumName: Value(currentItem.album),
+                  artworkUrl: Value(currentItem.artUri?.toString()),
+                ),
+              ],
+            ),
           IconButton(
             icon: const Icon(Icons.queue_music),
             onPressed: () => showModalBottomSheet<void>(

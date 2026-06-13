@@ -1,22 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:ytmusic/core/db/database.dart';
 import 'package:ytmusic/features/downloads/download_status_provider.dart';
 
 /// A download control for one track (single videoId) or a collection
 /// (album/playlist — all videoIds). Reflects the status of the *first* id for
 /// the icon; tapping enqueues all ids.
 class DownloadButton extends ConsumerWidget {
-  const DownloadButton({required this.videoIds, super.key});
+  const DownloadButton({
+    required this.videoIds,
+    this.ensure = const [],
+    super.key,
+  });
 
   final List<String> videoIds;
+
+  /// Optional minimal track rows to insert-if-absent before enqueueing.
+  /// Pass these when the track may not already exist in the DB (e.g. radio /
+  /// autoplay tracks in the now-playing screen).
+  final List<TracksCompanion> ensure;
 
   Future<void> _enqueue(
     BuildContext context,
     WidgetRef ref,
   ) async {
     try {
-      await ref.read(enqueueDownloadsProvider)(videoIds);
+      await ref.read(enqueueDownloadsProvider)(videoIds, ensure: ensure);
     } on Object catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

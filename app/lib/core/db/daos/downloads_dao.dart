@@ -10,6 +10,16 @@ class DownloadsDao extends DatabaseAccessor<AppDatabase>
     with _$DownloadsDaoMixin {
   DownloadsDao(super.db);
 
+  /// Insert minimal rows only if absent; never clobbers existing download
+  /// state (uses insertOrIgnore).
+  Future<void> ensureTracks(List<TracksCompanion> rows) async {
+    await batch((b) {
+      for (final r in rows) {
+        b.insert(tracks, r, mode: InsertMode.insertOrIgnore);
+      }
+    });
+  }
+
   Future<void> enqueue(List<String> videoIds, {required bool pinned}) async {
     await (update(tracks)..where((t) => t.videoId.isIn(videoIds))).write(
       TracksCompanion(

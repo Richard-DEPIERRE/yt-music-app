@@ -60,6 +60,10 @@ class DownloadRepository {
   }
 
   /// LRU-evict unpinned downloaded tracks until total size <= cap.
+  ///
+  /// Note: all Phase-5 manual downloads are pinned (`pinned = true`), so this
+  /// method is intentionally a no-op in Phase 5. Eviction will become active
+  /// in Phase 6 when auto-sync introduces un-pinned (evictable) tracks.
   Future<void> runEviction() async {
     var total = await _dao.unpinnedDownloadedBytes();
     if (total <= _capBytes) return;

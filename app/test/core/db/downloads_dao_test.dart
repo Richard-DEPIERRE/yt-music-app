@@ -67,4 +67,28 @@ void main() {
     final rows = await db.downloadsDao.lruUnpinned();
     expect(rows.first.videoId, 'old');
   });
+
+  test('ensureTracks inserts absent rows but never overwrites existing status',
+      () async {
+    // Seed an existing row as 'downloaded' (simulates a previously-downloaded
+    // track or a track that already exists in the DB).
+    await seed('a', status: 'downloaded');
+
+    // ensureTracks with the same videoId should NOT overwrite the status.
+    await db.downloadsDao.ensureTracks([
+      TracksCompanion.insert(videoId: 'a', title: 'Track A'),
+    ]);
+    final existing = await db.tracksDao.getById('a');
+    expect(existing!.downloadStatus, 'downloaded',
+        reason: 'existing row must not be clobbered');
+
+    // ensureTracks with a new videoId 'b' should insert a minimal row.
+    await db.downloadsDao.ensureTracks([
+      TracksCompanion.insert(videoId: 'b', title: 'Track B'),
+    ]);
+    final inserted = await db.tracksDao.getById('b');
+    expect(inserted, isNotNull, reason: 'absent row must be inserted');
+    expect(inserted!.downloadStatus, 'not_downloaded',
+        reason: 'newly inserted row gets default downloadStatus');
+  });
 }

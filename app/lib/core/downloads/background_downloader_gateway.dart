@@ -39,7 +39,9 @@ class BackgroundDownloaderGateway implements FileDownloaderGateway {
         group: _kGroup,
         updates: Updates.statusAndProgress,
         allowPause: true,
-        // retries defaults to 0; backoff is handled by the coordinator
+        // retries defaults to 0; failures are terminal and marked 'failed'
+        // in the DB. Manual retry (tapping the download button again) is the
+        // re-entry path — automatic backoff is not implemented in Phase 5.
       );
 
   @override
@@ -71,7 +73,20 @@ class BackgroundDownloaderGateway implements FileDownloaderGateway {
   @override
   Future<Set<String>> activeVideoIds() async {
     final records = await FileDownloader().database.allRecords(group: _kGroup);
-    return records.map((r) => r.taskId).toSet();
+    // Only non-terminal statuses count as "active". Completed/failed/canceled
+    // records are kept in the background_downloader DB but must not be treated
+    // as active — otherwise a 'downloading' row whose completion event was
+    // missed would never be re-queued by reconcile().
+    const active = {
+      TaskStatus.enqueued,
+      TaskStatus.running,
+      TaskStatus.paused,
+      TaskStatus.waitingToRetry,
+    };
+    return records
+        .where((r) => active.contains(r.status))
+        .map((r) => r.taskId)
+        .toSet();
   }
 
   void _onUpdate(TaskUpdate update) {

@@ -86,7 +86,17 @@ class DownloadCoordinator {
           for (final item in manifest.items) {
             _resolved[item.videoId] = item;
             await _repo.markDownloading(item.videoId);
-            await _gateway.enqueue(_requestFor(item));
+            try {
+              await _gateway.enqueue(_requestFor(item));
+            } on Object catch (e, st) {
+              // If the gateway rejects the enqueue, revert to queued so the
+              // row is not stranded as 'downloading' until next app launch.
+              debugPrint(
+                  '[DownloadCoordinator] gateway enqueue failed for '
+                  '${item.videoId}: $e\n$st');
+              await _repo.requeue(item.videoId);
+              _resolved.remove(item.videoId);
+            }
           }
         } on Object catch (e, st) {
           // Transient error (e.g. network blip): leave rows as queued for
