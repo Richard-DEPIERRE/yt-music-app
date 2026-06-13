@@ -23,7 +23,14 @@ part 'database.g.dart';
     SyncState,
     Settings,
   ],
-  daos: [AlbumsDao, ArtistsDao, PlaylistsDao, RecentlyPlayedDao, SyncStateDao, TracksDao],
+  daos: [
+    AlbumsDao,
+    ArtistsDao,
+    PlaylistsDao,
+    RecentlyPlayedDao,
+    SyncStateDao,
+    TracksDao,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(openConnection());
