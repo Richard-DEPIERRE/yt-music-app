@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ytmusic/core/audio/audio_handler.dart';
 import 'package:ytmusic/core/audio/audio_providers.dart';
+import 'package:ytmusic/features/now_playing/queue_sheet.dart';
 
 class NowPlayingScreen extends ConsumerWidget {
   const NowPlayingScreen({super.key});
@@ -16,7 +17,18 @@ class NowPlayingScreen extends ConsumerWidget {
     final handler = ref.watch(audioHandlerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Now Playing')),
+      appBar: AppBar(
+        title: const Text('Now Playing'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.queue_music),
+            onPressed: () => showModalBottomSheet<void>(
+              context: context,
+              builder: (_) => const QueueSheet(),
+            ),
+          ),
+        ],
+      ),
       body: mediaItem.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
@@ -65,9 +77,19 @@ class _Transport extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton(
+          icon: const Icon(Icons.skip_previous),
+          iconSize: 40,
+          onPressed: handler.skipToPrevious,
+        ),
+        IconButton(
           icon: Icon(playing ? Icons.pause_circle : Icons.play_circle),
           iconSize: 64,
           onPressed: () => playing ? handler.pause() : handler.play(),
+        ),
+        IconButton(
+          icon: const Icon(Icons.skip_next),
+          iconSize: 40,
+          onPressed: handler.skipToNext,
         ),
       ],
     );
