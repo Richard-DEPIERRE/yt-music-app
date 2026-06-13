@@ -18,9 +18,12 @@ class BackgroundDownloaderGateway implements FileDownloaderGateway {
   Stream<DownloadEvent> get events => _controller.stream;
 
   MemoryTaskQueue? _queue;
+  bool _configured = false;
 
   @override
   Future<void> configure({int maxConcurrent = 3}) async {
+    if (_configured) return;
+    _configured = true;
     final tq = MemoryTaskQueue()..maxConcurrent = maxConcurrent;
     FileDownloader().addTaskQueue(tq);
     _queue = tq;
@@ -52,8 +55,11 @@ class BackgroundDownloaderGateway implements FileDownloaderGateway {
 
   @override
   Future<void> resume(DownloadRequest req) async {
-    // background_downloader keeps the .partial file keyed by taskId; a fresh
-    // enqueue with the same taskId + new URL resumes via HTTP Range.
+    // The previous task failed (e.g. expired URL), so there is no pause
+    // ResumeData to continue from — re-enqueue with the same taskId and the
+    // freshly-resolved URL. This restarts the fetch from the beginning, which
+    // is acceptable for short audio files. (Background pause/resume across OS
+    // wakes still works for the normal, non-expired case.)
     await FileDownloader().enqueue(_task(req));
   }
 
@@ -64,7 +70,7 @@ class BackgroundDownloaderGateway implements FileDownloaderGateway {
 
   @override
   Future<Set<String>> activeVideoIds() async {
-    final records = await FileDownloader().database.allRecords();
+    final records = await FileDownloader().database.allRecords(group: _kGroup);
     return records.map((r) => r.taskId).toSet();
   }
 
@@ -112,6 +118,7 @@ class BackgroundDownloaderGateway implements FileDownloaderGateway {
     ));
   }
 
+  @override
   void dispose() {
     _sub.cancel();
     _controller.close();

@@ -46,4 +46,7 @@ abstract class FileDownloaderGateway {
   Future<Set<String>> activeVideoIds();
 
   Stream<DownloadEvent> get events;
+
+  /// Release resources (close the events stream, cancel subscriptions).
+  void dispose();
 }
