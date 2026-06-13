@@ -120,20 +120,21 @@ class AudioPlaybackHandler extends BaseAudioHandler {
 
   Future<void> playTrack(Track track) async {
     _currentTrack = track;
-    final api = _requireApi();
-    // iOS' AVPlayer cannot natively decode Opus-in-WebM (PlatformException
-    // -11828 "Cannot Open"). AAC-in-M4A plays on both iOS and Android. The
-    // backend will fall back to whatever's available if AAC isn't served.
-    final url = await chooseSource(
+    final sourceUrl = await chooseSource(
       videoId: track.videoId,
       localFileFor: localFileFor ?? (_) async => null,
-      resolveStreamUrl: (id) async =>
-          (await api.resolveStream(id, codec: 'aac')).url,
+      resolveStreamUrl: (id) async {
+        // iOS' AVPlayer cannot natively decode Opus-in-WebM (PlatformException
+        // -11828 "Cannot Open"). AAC-in-M4A plays on both iOS and Android. The
+        // backend will fall back to whatever's available if AAC isn't served.
+        final api = _requireApi();
+        return (await api.resolveStream(id, codec: 'aac')).url;
+      },
     );
     mediaItem.add(_toMediaItem(track));
-    await _player.setAudioSource(AudioSource.uri(Uri.parse(url)));
-    await _player.play();
+    await _player.setAudioSource(AudioSource.uri(Uri.parse(sourceUrl)));
     onPlayed?.call(track.videoId);
+    await _player.play();
   }
 
   Future<void> setQueue(

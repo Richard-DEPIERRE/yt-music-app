@@ -32,15 +32,18 @@ Future<void> main() async {
             .tracksDao
             .getById(videoId);
         if (row?.downloadStatus == 'downloaded' && row?.localPath != null) {
-          return File(row!.localPath!).existsSync() ? row.localPath : null;
+          // ignore: avoid_slow_async_io — File.exists() is required here; sync existsSync() is forbidden on the main isolate
+          return await File(row!.localPath!).exists() ? row.localPath : null;
         }
         return null;
       },
       onPlayed: (videoId) {
-        container
-            .read(appDatabaseProvider)
-            .tracksDao
-            .touchLastPlayed(videoId);
+        unawaited(
+          container
+              .read(appDatabaseProvider)
+              .tracksDao
+              .touchLastPlayed(videoId),
+        );
       },
     ),
     config: const AudioServiceConfig(
