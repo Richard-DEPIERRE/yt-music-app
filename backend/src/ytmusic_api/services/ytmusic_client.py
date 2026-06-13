@@ -64,6 +64,20 @@ class YTMusicClient:
 
         return await asyncio.to_thread(_call)
 
+    async def get_album(self, browse_id: str) -> dict[str, Any]:
+        def _call() -> dict[str, Any]:
+            client = self._build()
+            return client.get_album(browse_id)
+
+        return await asyncio.to_thread(_call)
+
+    async def get_artist(self, channel_id: str) -> dict[str, Any]:
+        def _call() -> dict[str, Any]:
+            client = self._build()
+            return client.get_artist(channel_id)
+
+        return await asyncio.to_thread(_call)
+
     async def get_library_songs(self, limit: int = 1) -> list[dict[str, Any]]:
         """Cheap authenticated probe used by AuthHealthMonitor."""
 
