@@ -62,6 +62,7 @@ void main() {
 
   DownloadCoordinator make({
     Future<DownloadManifest> Function(List<String>)? fetch,
+    FileSizeOf? fileSizeOf,
   }) =>
       DownloadCoordinator(
         repository: repo,
@@ -71,6 +72,7 @@ void main() {
                   items: ids.map(_item).toList(),
                   errors: [],
                 ),
+        fileSizeOf: fileSizeOf ?? (_) => null,
       );
 
   test('queued rows are resolved and enqueued into the gateway', () async {
@@ -130,5 +132,21 @@ void main() {
     await coord.reconcile();
     final row = await db.tracksDao.getById('a');
     expect(row!.downloadStatus, 'queued');
+  });
+
+  test('complete event uses real file size over manifest contentLength', () async {
+    // fileSizeOf always returns 4242, manifest contentLength is 100 (_item)
+    await seedQueued('a');
+    final coord = make(fileSizeOf: (_) => 4242)..start();
+    await coord.processQueueOnce();
+    gateway.emit(DownloadEvent(
+      videoId: 'a',
+      kind: DownloadEventKind.complete,
+      filePath: '/audio/a.m4a',
+    ));
+    await Future<void>.delayed(Duration.zero);
+    final row = await db.tracksDao.getById('a');
+    expect(row!.sizeBytes, 4242);
+    coord.dispose();
   });
 }

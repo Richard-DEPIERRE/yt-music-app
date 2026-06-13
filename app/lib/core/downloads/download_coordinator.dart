@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:ytmusic/core/api/models/download_manifest.dart';
@@ -6,6 +7,12 @@ import 'package:ytmusic/core/downloads/download_gateway.dart';
 import 'package:ytmusic/core/downloads/download_repository.dart';
 
 typedef FetchManifest = Future<DownloadManifest> Function(List<String> ids);
+typedef FileSizeOf = int? Function(String path);
+
+int? _realFileSize(String path) {
+  final f = File(path);
+  return f.existsSync() ? f.lengthSync() : null;
+}
 
 const int _kBatchSize = 8;
 const int _kMaxAttempts = 3;
@@ -15,13 +22,16 @@ class DownloadCoordinator {
     required DownloadRepository repository,
     required FileDownloaderGateway gateway,
     required FetchManifest fetchManifest,
+    FileSizeOf fileSizeOf = _realFileSize,
   })  : _repo = repository,
         _gateway = gateway,
-        _fetch = fetchManifest;
+        _fetch = fetchManifest,
+        _fileSizeOf = fileSizeOf;
 
   final DownloadRepository _repo;
   final FileDownloaderGateway _gateway;
   final FetchManifest _fetch;
+  final FileSizeOf _fileSizeOf;
 
   StreamSubscription<List<dynamic>>? _queueSub;
   StreamSubscription<DownloadEvent>? _eventSub;
@@ -101,7 +111,8 @@ class DownloadCoordinator {
     switch (e.kind) {
       case DownloadEventKind.complete:
         final item = _resolved[e.videoId];
-        final size = item?.contentLength ?? 0;
+        final realSize = e.filePath != null ? _fileSizeOf(e.filePath!) : null;
+        final size = realSize ?? item?.contentLength ?? 0;
         await _repo.markDownloaded(
           e.videoId,
           localPath: e.filePath ?? '',
