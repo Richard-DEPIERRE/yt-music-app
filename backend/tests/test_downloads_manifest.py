@@ -1,12 +1,3 @@
-def test_manifest_request_defaults():
-    from ytmusic_api.models.downloads import ManifestRequest
-
-    req = ManifestRequest(videoIds=["a", "b"])
-    assert req.codec == "aac"
-    assert req.quality == "high"
-    assert req.videoIds == ["a", "b"]
-
-
 from datetime import datetime, timedelta
 
 import pytest
@@ -16,6 +7,15 @@ from ytmusic_api.main import create_app
 from ytmusic_api.services.cache import TtlCache
 from ytmusic_api.services.concurrency import BoundedRunner
 from ytmusic_api.services.stream_resolver import ResolvedStream
+
+
+def test_manifest_request_defaults():
+    from ytmusic_api.models.downloads import ManifestRequest
+
+    req = ManifestRequest(videoIds=["a", "b"])
+    assert req.codec == "aac"
+    assert req.quality == "high"
+    assert req.videoIds == ["a", "b"]
 
 
 class _MapResolver:

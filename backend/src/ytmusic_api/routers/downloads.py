@@ -28,7 +28,7 @@ async def manifest(request: Request, body: ManifestRequest) -> ManifestResponse:
     runner: BoundedRunner = request.app.state.stream_runner
 
     async def resolve_one(video_id: str) -> ManifestItem | ManifestError:
-        cache_key = f"stream:{video_id}:{body.codec}:{body.quality}"
+        cache_key = f"manifest:{video_id}:{body.codec}:{body.quality}"
         cached = cache.get(cache_key)
         if cached is not None:
             return ManifestItem(
