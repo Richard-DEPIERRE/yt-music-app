@@ -6,7 +6,13 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from ..models.catalog import Thumbnail
-from ..models.discovery import QueueItem, QueueResponse
+from ..models.discovery import (
+    HomeItem,
+    HomeResponse,
+    HomeSection,
+    QueueItem,
+    QueueResponse,
+)
 from ..services.cache import TtlCache
 from ..services.ytmusic_client import YTMusicClient
 
@@ -95,3 +101,64 @@ async def get_up_next(
         raise HTTPException(status_code=502, detail=f"upstream: {exc}") from exc
 
     return _build_queue_response(raw, cache=cache, cache_key=cache_key)
+
+
+_HOME_TTL = 5 * 60  # 5 minutes
+
+
+def _classify_home_item(raw: dict[str, Any]) -> HomeItem | None:
+    title = raw.get("title")
+    if not title:
+        return None
+    thumbs = raw.get("thumbnails") or []
+    thumb = Thumbnail(**thumbs[-1]) if thumbs else None
+    artists = raw.get("artists") or []
+    artist_name = artists[0]["name"] if artists else None
+
+    if raw.get("videoId"):
+        kind = "song"
+    elif raw.get("playlistId"):
+        kind = "playlist"
+    elif raw.get("subscribers") is not None:
+        kind = "artist"
+    elif raw.get("browseId"):
+        kind = "album"
+    else:
+        return None
+
+    return HomeItem(
+        kind=kind,
+        title=title,
+        videoId=raw.get("videoId"),
+        browseId=raw.get("browseId"),
+        playlistId=raw.get("playlistId"),
+        artistName=artist_name,
+        thumbnail=thumb,
+    )
+
+
+@router.get("/home", response_model=HomeResponse)
+async def get_home(request: Request) -> HomeResponse:
+    cache: TtlCache = request.app.state.cache
+    ytm: YTMusicClient = request.app.state.ytmusic_client
+
+    cache_key = "home"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return HomeResponse.model_validate(cached)
+
+    try:
+        raw_rows = await ytm.get_home(limit=5)
+    except Exception as exc:
+        logger.exception("get_home failure")
+        raise HTTPException(status_code=502, detail=f"upstream: {exc}") from exc
+
+    sections: list[HomeSection] = []
+    for row in raw_rows:
+        contents = row.get("contents") or []
+        items = [n for n in (_classify_home_item(c) for c in contents) if n is not None]
+        if items:
+            sections.append(HomeSection(title=row.get("title", ""), items=items))
+    response = HomeResponse(sections=sections)
+    cache.set(cache_key, response.model_dump(mode="json"), ttl_seconds=_HOME_TTL)
+    return response
