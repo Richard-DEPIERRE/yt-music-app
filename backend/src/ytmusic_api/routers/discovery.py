@@ -13,13 +13,23 @@ from ..services.ytmusic_client import YTMusicClient
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-_RADIO_TTL = 5 * 60  # 5 minutes
+_QUEUE_TTL = 5 * 60  # 5 minutes — shared by radio and up-next
 
 
 def _watch_thumb(raw: dict[str, Any]) -> Thumbnail | None:
     # Watch tracks use singular `thumbnail` (a list); fall back to `thumbnails`.
     thumbs = raw.get("thumbnail") or raw.get("thumbnails") or []
     return Thumbnail(**thumbs[-1]) if thumbs else None
+
+
+def _build_queue_response(
+    raw: dict[str, Any], *, cache: TtlCache, cache_key: str
+) -> QueueResponse:
+    tracks = raw.get("tracks") or []
+    items = [n for n in (_normalise_queue_item(t) for t in tracks) if n is not None]
+    response = QueueResponse(items=items, continuation=None)
+    cache.set(cache_key, response.model_dump(mode="json"), ttl_seconds=_QUEUE_TTL)
+    return response
 
 
 def _normalise_queue_item(raw: dict[str, Any]) -> QueueItem | None:
@@ -61,11 +71,7 @@ async def get_radio(
         logger.exception("get_watch_playlist (radio) failure")
         raise HTTPException(status_code=502, detail=f"upstream: {exc}") from exc
 
-    tracks = raw.get("tracks") or []
-    items = [n for n in (_normalise_queue_item(t) for t in tracks) if n is not None]
-    response = QueueResponse(items=items, continuation=None)
-    cache.set(cache_key, response.model_dump(mode="json"), ttl_seconds=_RADIO_TTL)
-    return response
+    return _build_queue_response(raw, cache=cache, cache_key=cache_key)
 
 
 @router.get("/up-next", response_model=QueueResponse)
@@ -88,8 +94,4 @@ async def get_up_next(
         logger.exception("get_watch_playlist (up-next) failure")
         raise HTTPException(status_code=502, detail=f"upstream: {exc}") from exc
 
-    tracks = raw.get("tracks") or []
-    items = [n for n in (_normalise_queue_item(t) for t in tracks) if n is not None]
-    response = QueueResponse(items=items, continuation=None)
-    cache.set(cache_key, response.model_dump(mode="json"), ttl_seconds=_RADIO_TTL)
-    return response
+    return _build_queue_response(raw, cache=cache, cache_key=cache_key)

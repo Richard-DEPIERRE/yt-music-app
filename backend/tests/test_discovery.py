@@ -14,11 +14,14 @@ class _FakeYTMusic(YTMusicClient):  # type: ignore[misc]
     def __init__(self) -> None:
         self.watch_payload: dict[str, Any] = {"tracks": []}
         self.last_call: dict[str, Any] = {}
+        self.watch_calls: int = 0
+        # Forward-prep for Part C's /home endpoint — not used by radio/up-next tests.
         self.home_payload: list[dict[str, Any]] = []
 
     async def get_watch_playlist(  # type: ignore[override]
         self, *, video_id=None, playlist_id=None, radio=False, limit=25
     ):
+        self.watch_calls += 1
         self.last_call = {
             "video_id": video_id,
             "playlist_id": playlist_id,
@@ -27,6 +30,7 @@ class _FakeYTMusic(YTMusicClient):  # type: ignore[misc]
         }
         return self.watch_payload
 
+    # Forward-prep for Part C's /home endpoint — not used by radio/up-next tests.
     async def get_home(self, *, limit=3):  # type: ignore[override]
         return self.home_payload
 
@@ -102,3 +106,20 @@ def test_up_next_defaults_radio_false(disco_client, fake_ytm):
 
 def test_up_next_requires_video_id(disco_client):
     assert disco_client.get("/v1/up-next").status_code == 422
+
+
+def test_radio_caches_per_seed(disco_client, fake_ytm):
+    fake_ytm.watch_payload = {"tracks": [_watch_track("v1")]}
+    disco_client.get("/v1/radio?seedVideoId=v0")
+    disco_client.get("/v1/radio?seedVideoId=v0")
+    assert fake_ytm.watch_calls == 1
+
+
+def test_up_next_caches_per_video_and_radio_flag(disco_client, fake_ytm):
+    fake_ytm.watch_payload = {"tracks": [_watch_track("v1")]}
+    disco_client.get("/v1/up-next?videoId=v0&radio=true")
+    disco_client.get("/v1/up-next?videoId=v0&radio=true")
+    assert fake_ytm.watch_calls == 1
+    # different radio flag is a distinct cache entry → second upstream call
+    disco_client.get("/v1/up-next?videoId=v0&radio=false")
+    assert fake_ytm.watch_calls == 2
