@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ytmusic/core/audio/audio_handler.dart';
 import 'package:ytmusic/core/audio/audio_providers.dart';
+import 'package:ytmusic/features/downloads/widgets/download_button.dart';
 import 'package:ytmusic/features/now_playing/queue_sheet.dart';
 
 class NowPlayingScreen extends ConsumerWidget {
@@ -16,10 +17,13 @@ class NowPlayingScreen extends ConsumerWidget {
     final state = ref.watch(playbackStateStreamProvider);
     final handler = ref.watch(audioHandlerProvider);
 
+    final currentVideoId = mediaItem.valueOrNull?.id;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Now Playing'),
         actions: [
+          if (currentVideoId != null)
+            DownloadButton(videoIds: [currentVideoId]),
           IconButton(
             icon: const Icon(Icons.queue_music),
             onPressed: () => showModalBottomSheet<void>(

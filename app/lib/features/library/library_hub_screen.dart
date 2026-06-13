@@ -30,6 +30,11 @@ class LibraryHubScreen extends StatelessWidget {
             title: const Text('History'),
             onTap: () => context.push('/library/history'),
           ),
+          ListTile(
+            leading: const Icon(Icons.download_done),
+            title: const Text('Downloads'),
+            onTap: () => context.push('/downloads'),
+          ),
         ],
       ),
     );

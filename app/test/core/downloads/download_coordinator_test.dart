@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ytmusic/core/api/models/download_manifest.dart';
@@ -56,7 +55,8 @@ void main() {
   tearDown(() => db.close());
 
   Future<void> seedQueued(String id) async {
-    await db.tracksDao.upsertTrack(TracksCompanion.insert(videoId: id, title: id));
+    await db.tracksDao
+        .upsertTrack(TracksCompanion.insert(videoId: id, title: id));
     await db.downloadsDao.enqueue([id], pinned: true);
   }
 
@@ -101,7 +101,7 @@ void main() {
     await seedQueued('a');
     final coord = make()..start();
     await coord.processQueueOnce();
-    gateway.emit(DownloadEvent(
+    gateway.emit(const DownloadEvent(
       videoId: 'a',
       kind: DownloadEventKind.complete,
       filePath: '/audio/a.m4a',
@@ -118,14 +118,16 @@ void main() {
     final coord = make()..start();
     await coord.processQueueOnce();
     gateway.emit(
-        DownloadEvent(videoId: 'a', kind: DownloadEventKind.urlExpired));
+      const DownloadEvent(videoId: 'a', kind: DownloadEventKind.urlExpired),
+    );
     await Future<void>.delayed(Duration.zero);
     expect(gateway.resumed.map((r) => r.videoId), ['a']);
     coord.dispose();
   });
 
   test('reconcile requeues orphaned downloading rows', () async {
-    await db.tracksDao.upsertTrack(TracksCompanion.insert(videoId: 'a', title: 'a'));
+    await db.tracksDao
+        .upsertTrack(TracksCompanion.insert(videoId: 'a', title: 'a'));
     await db.downloadsDao.markDownloading('a');
     gateway.active = {}; // downloader lost the task
     final coord = make();
@@ -134,12 +136,13 @@ void main() {
     expect(row!.downloadStatus, 'queued');
   });
 
-  test('complete event uses real file size over manifest contentLength', () async {
+  test('complete event uses real file size over manifest contentLength',
+      () async {
     // fileSizeOf always returns 4242, manifest contentLength is 100 (_item)
     await seedQueued('a');
     final coord = make(fileSizeOf: (_) => 4242)..start();
     await coord.processQueueOnce();
-    gateway.emit(DownloadEvent(
+    gateway.emit(const DownloadEvent(
       videoId: 'a',
       kind: DownloadEventKind.complete,
       filePath: '/audio/a.m4a',

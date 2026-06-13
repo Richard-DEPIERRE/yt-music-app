@@ -43,12 +43,12 @@ void main() {
     );
     client.dio.httpClientAdapter = adapter;
 
-    final manifest = await client.getManifest(['a'], codec: 'aac');
+    final manifest = await client.getManifest(['a'], codec: 'opus');
 
     expect(manifest.items.single.videoId, 'a');
     expect(adapter.captured!.path, '/v1/downloads/manifest');
     expect(adapter.captured!.method, 'POST');
     expect((adapter.captured!.data as Map)['videoIds'], ['a']);
-    expect((adapter.captured!.data as Map)['codec'], 'aac');
+    expect((adapter.captured!.data as Map)['codec'], 'opus');
   });
 }

@@ -6,6 +6,7 @@ import 'package:ytmusic/core/audio/audio_providers.dart';
 import 'package:ytmusic/core/db/database.dart';
 import 'package:ytmusic/core/db/db_providers.dart';
 import 'package:ytmusic/core/library/library_providers.dart';
+import 'package:ytmusic/features/downloads/widgets/download_button.dart';
 import 'package:ytmusic/features/library/widgets/track_list_tile.dart';
 
 class PlaylistDetailScreen extends ConsumerStatefulWidget {
@@ -20,6 +21,8 @@ class PlaylistDetailScreen extends ConsumerStatefulWidget {
 
 class _PlaylistDetailScreenState
     extends ConsumerState<PlaylistDetailScreen> {
+  List<String> _trackVideoIds = const [];
+
   @override
   void initState() {
     super.initState();
@@ -52,7 +55,13 @@ class _PlaylistDetailScreenState
   Widget build(BuildContext context) {
     final db = ref.watch(appDatabaseProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Playlist')),
+      appBar: AppBar(
+        title: const Text('Playlist'),
+        actions: [
+          if (_trackVideoIds.isNotEmpty)
+            DownloadButton(videoIds: _trackVideoIds),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: StreamBuilder<List<PlaylistTrack>>(
@@ -77,6 +86,14 @@ class _PlaylistDetailScreenState
                     child: CircularProgressIndicator(),
                   );
                 }
+                // Update AppBar DownloadButton once tracks are resolved.
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  final ids = tracks.map((t) => t.videoId).toList();
+                  if (ids.length != _trackVideoIds.length) {
+                    setState(() => _trackVideoIds = ids);
+                  }
+                });
                 return ListView.builder(
                   itemCount: tracks.length,
                   itemBuilder: (ctx, i) {
