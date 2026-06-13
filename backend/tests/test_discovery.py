@@ -83,3 +83,22 @@ def test_radio_passes_seed_and_radio_flag(disco_client, fake_ytm):
 def test_radio_requires_seed(disco_client):
     r = disco_client.get("/v1/radio")
     assert r.status_code == 422
+
+
+def test_up_next_passes_video_id_and_radio_flag(disco_client, fake_ytm):
+    fake_ytm.watch_payload = {"tracks": [_watch_track("v1")]}
+    r = disco_client.get("/v1/up-next?videoId=v0&radio=true")
+    assert r.status_code == 200
+    assert fake_ytm.last_call["video_id"] == "v0"
+    assert fake_ytm.last_call["radio"] is True
+    assert [it["videoId"] for it in r.json()["items"]] == ["v1"]
+
+
+def test_up_next_defaults_radio_false(disco_client, fake_ytm):
+    fake_ytm.watch_payload = {"tracks": []}
+    disco_client.get("/v1/up-next?videoId=v0")
+    assert fake_ytm.last_call["radio"] is False
+
+
+def test_up_next_requires_video_id(disco_client):
+    assert disco_client.get("/v1/up-next").status_code == 422
