@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:ytmusic/core/api/api_config.dart';
 import 'package:ytmusic/core/api/models/album_detail.dart';
 import 'package:ytmusic/core/api/models/artist_detail.dart';
+import 'package:ytmusic/core/api/models/download_manifest.dart';
 import 'package:ytmusic/core/api/models/home_feed.dart';
 import 'package:ytmusic/core/api/models/library_models.dart';
 import 'package:ytmusic/core/api/models/queue_item.dart';
@@ -277,6 +278,29 @@ class ApiClient {
       return (res.data!['sections'] as List)
           .map((e) => HomeSection.fromJson(e as Map<String, dynamic>))
           .toList();
+    } on DioException catch (e) {
+      throw ApiException(
+        e.response?.statusCode ?? 0,
+        e.message ?? 'Network error',
+      );
+    }
+  }
+
+  Future<DownloadManifest> getManifest(
+    List<String> videoIds, {
+    String codec = 'aac',
+    String quality = 'high',
+  }) async {
+    try {
+      final res = await dio.post<Map<String, dynamic>>(
+        '/v1/downloads/manifest',
+        data: {
+          'videoIds': videoIds,
+          'codec': codec,
+          'quality': quality,
+        },
+      );
+      return DownloadManifest.fromJson(res.data!);
     } on DioException catch (e) {
       throw ApiException(
         e.response?.statusCode ?? 0,
