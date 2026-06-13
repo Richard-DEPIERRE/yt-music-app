@@ -16,10 +16,12 @@ class _RecordingAdapter implements HttpClientAdapter {
     Future<dynamic>? cancelFuture,
   ) async {
     lastPath = options.path;
+    const body =
+        '{"sections":[{"title":"Quick picks","items":'
+        ' [{"kind":"song","title":"Gravity",'
+        ' "videoId":"v1","artistName":"yetep"}]}]}';
     return ResponseBody.fromString(
-      '{"sections":[{"title":"Quick picks","items":['
-      '{"kind":"song","title":"Gravity","videoId":"v1",'
-      '"artistName":"yetep"}]}]}',
+      body,
       200,
       headers: const {
         Headers.contentTypeHeader: ['application/json'],

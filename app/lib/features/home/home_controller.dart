@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ytmusic/core/api/api_providers.dart';
 import 'package:ytmusic/core/api/models/home_feed.dart';
 
-final homeFeedProvider =
+final AutoDisposeFutureProvider<List<HomeSection>> homeFeedProvider =
     FutureProvider.autoDispose<List<HomeSection>>((ref) async {
   final api = ref.watch(apiClientProvider);
   if (api == null) {
