@@ -56,4 +56,34 @@ void main() {
     final tracks = await db.tracksDao.getByIds(['v1', 'v2']);
     expect(tracks.length, 2);
   });
+
+  test('refreshAlbumIfStale skips network when fresh', () async {
+    when(() => api.getAlbum(any())).thenAnswer(
+      (_) async => album_models.AlbumDetail(
+        browseId: 'AL1',
+        title: 'Revival',
+        artistName: 'Eminem',
+        artistBrowseId: 'UCedv',
+        trackCount: 2,
+        items: [
+          album_models.AlbumTrack(
+            videoId: 'v1',
+            title: 'A',
+            durationMs: 1000,
+            trackNumber: 1,
+          ),
+          album_models.AlbumTrack(
+            videoId: 'v2',
+            title: 'B',
+            durationMs: 2000,
+            trackNumber: 2,
+          ),
+        ],
+      ),
+    );
+    await repo.refreshAlbum('AL1');
+    clearInteractions(api);
+    await repo.refreshAlbumIfStale('AL1');
+    verifyNever(() => api.getAlbum(any()));
+  });
 }
