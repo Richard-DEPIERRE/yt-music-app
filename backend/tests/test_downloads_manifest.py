@@ -1,8 +1,11 @@
+import tempfile
 from datetime import datetime, timedelta
+from pathlib import Path
 
-import pytest
 from fastapi.testclient import TestClient
 
+from ytmusic_api.auth.headers import HeadersStore
+from ytmusic_api.auth.health import AuthHealthMonitor, AuthStatus
 from ytmusic_api.main import create_app
 from ytmusic_api.services.cache import TtlCache
 from ytmusic_api.services.concurrency import BoundedRunner
@@ -48,11 +51,6 @@ def _payload(video_id):
 
 
 def _client(resolver):
-    import tempfile
-    from pathlib import Path
-    from ytmusic_api.auth.headers import HeadersStore
-    from ytmusic_api.auth.health import AuthHealthMonitor, AuthStatus
-
     class _StubMonitor(AuthHealthMonitor):
         def __init__(self, status: AuthStatus) -> None:
             self._fixed_status = status
