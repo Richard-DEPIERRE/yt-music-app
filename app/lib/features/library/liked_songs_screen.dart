@@ -27,14 +27,24 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
     Future.microtask(() async {
       final repo = ref.read(libraryRepositoryProvider);
       if (repo == null) return;
-      await repo.refreshLikedIfStale();
+      // Best-effort refresh: the cached liked list (Drift stream) still
+      // renders if the network pull fails (e.g. backend 502 / expired YT auth).
+      try {
+        await repo.refreshLikedIfStale();
+      } on Object catch (e) {
+        debugPrint('Liked refresh failed: $e');
+      }
     });
   }
 
   Future<void> _refresh() async {
     final repo = ref.read(libraryRepositoryProvider);
     if (repo == null) return;
-    await repo.refreshLiked();
+    try {
+      await repo.refreshLiked();
+    } on Object catch (e) {
+      debugPrint('Liked refresh failed: $e');
+    }
   }
 
   Future<void> _play(Track t) async {

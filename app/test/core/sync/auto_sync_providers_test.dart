@@ -36,6 +36,16 @@ void main() {
     verify(() => api.getLikedSongs(limit: any(named: 'limit'))).called(1);
   });
 
+  test('trigger returns null (never throws) when the sync fails', () async {
+    when(() => api.getLikedSongs(limit: any(named: 'limit')))
+        .thenThrow(ApiException(502, 'upstream'));
+    final c = makeContainer();
+    addTearDown(c.dispose);
+    // Best-effort sync: a backend failure must be swallowed, not thrown.
+    final result = await c.read(triggerLikedAutoSyncProvider)(force: true);
+    expect(result, isNull);
+  });
+
   test('trigger is debounced when library_liked is fresh', () async {
     final c = makeContainer();
     addTearDown(c.dispose);
