@@ -12,9 +12,20 @@ class LibraryRepository {
   static const Duration _staleTtl = Duration(hours: 1);
 
   Future<void> refreshLiked() async {
+    await refreshLikedReturningNew();
+  }
+
+  /// Reconciles local likes with the server and returns the set of videoIds
+  /// that became liked in this sync (present on the server, not liked locally
+  /// before). Used by auto-sync to decide what to auto-download.
+  Future<Set<String>> refreshLikedReturningNew() async {
     final page = await api.getLikedSongs();
     final now = DateTime.now().toUtc();
     final newIds = page.items.map((s) => s.videoId).toSet();
+
+    final previouslyLikedRows = await db.tracksDao.getLiked();
+    final previouslyLiked =
+        previouslyLikedRows.map((t) => t.videoId).toSet();
 
     await db.transaction(() async {
       if (newIds.isEmpty) {
@@ -44,6 +55,8 @@ class LibraryRepository {
       }
       await db.syncStateDao.mark('library_liked', at: now);
     });
+
+    return newIds.difference(previouslyLiked);
   }
 
   Future<void> refreshLikedIfStale() =>
