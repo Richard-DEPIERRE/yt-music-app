@@ -11,10 +11,12 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          triggerLikedAutoSyncProvider.overrideWithValue(({bool force = false}) async {
-            calls++;
-            return const LikedSyncResult(liked: 0, newlyQueued: 0);
-          }),
+          triggerLikedAutoSyncProvider.overrideWithValue(
+            ({bool force = false}) async {
+              calls++;
+              return const LikedSyncResult(liked: 0, newlyQueued: 0);
+            },
+          ),
         ],
         child: const MaterialApp(
           home: AutoSyncObserver(child: SizedBox.shrink()),

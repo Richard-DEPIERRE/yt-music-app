@@ -45,11 +45,15 @@ void main() {
     expect(deleted, isEmpty);
   });
 
-  test('eviction removes unpinned LRU but keeps pinned even over cap', () async {
-    // pinned (manual) downloads totalling 1200 > cap 1000 — must be untouched.
+  test(
+    'eviction removes unpinned LRU but keeps pinned even over cap',
+    () async {
+    // pinned (manual) downloads totalling 1200 > cap 1000
+    // — must be untouched.
     await downloaded('m1', 600, pinned: true);
     await downloaded('m2', 600, pinned: true);
-    // unpinned (auto) downloads — oldest first by insertion (lastPlayedAt null).
+    // unpinned (auto) downloads — oldest first by insertion
+    // (lastPlayedAt null).
     await downloaded('a1', 600); // unpinned, total unpinned = 600 <= 1000
     await downloaded('a2', 600); // unpinned, total unpinned = 1200 > 1000
     await repo.runEviction();
@@ -57,7 +61,9 @@ void main() {
     expect(deleted, ['/audio/a1.m4a']);
     expect((await db.tracksDao.getById('m1'))!.downloadStatus, 'downloaded');
     expect((await db.tracksDao.getById('m2'))!.downloadStatus, 'downloaded');
-    expect((await db.tracksDao.getById('a1'))!.downloadStatus, 'not_downloaded');
+    final a1Status =
+        (await db.tracksDao.getById('a1'))!.downloadStatus;
+    expect(a1Status, 'not_downloaded');
     expect((await db.tracksDao.getById('a2'))!.downloadStatus, 'downloaded');
   });
 
