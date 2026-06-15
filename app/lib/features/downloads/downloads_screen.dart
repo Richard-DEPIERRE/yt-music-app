@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ytmusic/core/db/database.dart';
 import 'package:ytmusic/core/downloads/download_providers.dart';
+import 'package:ytmusic/core/sync/auto_sync_providers.dart';
 
 final _downloadedProvider = StreamProvider<List<Track>>((ref) {
   return ref.watch(downloadRepositoryProvider).watchDownloaded();
@@ -23,7 +24,26 @@ class DownloadsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(_downloadedProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Downloads')),
+      appBar: AppBar(
+        title: const Text('Downloads'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.sync),
+            tooltip: 'Sync liked songs',
+            onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final result =
+                  await ref.read(triggerLikedAutoSyncProvider)(force: true);
+              if (!context.mounted) return;
+              messenger.showSnackBar(SnackBar(
+                content: Text(result == null
+                    ? 'Sync unavailable'
+                    : 'Synced — ${result.newlyQueued} new queued'),
+              ));
+            },
+          ),
+        ],
+      ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
