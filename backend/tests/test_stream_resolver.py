@@ -122,13 +122,12 @@ async def test_resolver_returns_resolved_stream(monkeypatch):
     assert result.content_length == 4321
     assert result.expires_at > datetime.utcnow()
 
-    # Verify pot-provider URL was wired into yt-dlp opts.
+    # Verify the pot-provider base_url was wired into the bgutil plugin's
+    # extractor-args namespace (so yt-dlp actually fetches PO tokens).
     extractor_args = captured["opts"]["extractor_args"]
-    assert "youtube" in extractor_args
-    pot_values = [
-        v for vs in extractor_args["youtube"].values() for v in vs
-    ]
-    assert any("pot:4416" in v for v in pot_values)
+    assert "youtubepot-bgutilhttp" in extractor_args
+    base_url = extractor_args["youtubepot-bgutilhttp"]["base_url"]
+    assert any("pot:4416" in v for v in base_url)
 
 
 def test_resolved_stream_has_artwork_url():

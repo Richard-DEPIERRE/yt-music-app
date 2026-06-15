@@ -125,6 +125,56 @@ void main() {
     coord.dispose();
   });
 
+  test('repeated urlExpired with no progress gives up and fails the track',
+      () async {
+    // A video whose freshly-resolved URL keeps 403'ing must not loop forever
+    // (which hammered /v1/downloads/manifest). After _kMaxAttempts (3) consecutive
+    // re-resolves with no progress, the track is marked failed.
+    await seedQueued('a');
+    final coord = make()..start();
+    await coord.processQueueOnce();
+
+    // Simulate the production loop: each resume's task immediately 403s again.
+    for (var i = 0; i < 10; i++) {
+      gateway.emit(
+        const DownloadEvent(videoId: 'a', kind: DownloadEventKind.urlExpired),
+      );
+      await Future<void>.delayed(Duration.zero);
+    }
+
+    expect(gateway.resumed.length, 3,
+        reason: 'resume must be capped at _kMaxAttempts, not unbounded');
+    final row = await db.tracksDao.getById('a');
+    expect(row!.downloadStatus, 'failed');
+    coord.dispose();
+  });
+
+  test('progress resets the re-resolve budget (legit long download)', () async {
+    // A URL that works (emits progress) then later expires should still be
+    // re-resolvable — the cap only targets the no-progress infinite loop.
+    await seedQueued('a');
+    final coord = make()..start();
+    await coord.processQueueOnce();
+
+    for (var i = 0; i < 5; i++) {
+      gateway.emit(
+        const DownloadEvent(videoId: 'a', kind: DownloadEventKind.urlExpired),
+      );
+      await Future<void>.delayed(Duration.zero);
+      gateway.emit(const DownloadEvent(
+        videoId: 'a',
+        kind: DownloadEventKind.progress,
+        progress: 0.5,
+      ));
+      await Future<void>.delayed(Duration.zero);
+    }
+
+    expect(gateway.resumed.length, 5, reason: 'progress should reset the cap');
+    final row = await db.tracksDao.getById('a');
+    expect(row!.downloadStatus, isNot('failed'));
+    coord.dispose();
+  });
+
   test('reconcile requeues orphaned downloading rows', () async {
     await db.tracksDao
         .upsertTrack(TracksCompanion.insert(videoId: 'a', title: 'a'));

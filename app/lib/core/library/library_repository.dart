@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import 'package:ytmusic/core/api/api_client.dart';
 import 'package:ytmusic/core/db/database.dart';
+import 'package:ytmusic/core/logging/app_log.dart';
 
 class LibraryRepository {
   LibraryRepository({required this.db, required this.api});
@@ -19,9 +20,11 @@ class LibraryRepository {
   /// that became liked in this sync (present on the server, not liked locally
   /// before). Used by auto-sync to decide what to auto-download.
   Future<Set<String>> refreshLikedReturningNew() async {
+    AppLog.d('Library', 'refreshLiked: fetching liked songs from API');
     final page = await api.getLikedSongs();
     final now = DateTime.now().toUtc();
     final newIds = page.items.map((s) => s.videoId).toSet();
+    AppLog.i('Library', 'refreshLiked: server returned ${newIds.length} liked');
 
     final previouslyLikedRows = await db.tracksDao.getLiked();
     final previouslyLiked =
