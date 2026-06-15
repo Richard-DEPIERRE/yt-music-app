@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ytmusic/core/db/db_providers.dart';
@@ -35,6 +36,14 @@ final triggerLikedAutoSyncProvider =
           .isFresh('library_liked', ttl: kAutoSyncMinInterval);
       if (fresh) return null;
     }
-    return service.run();
+    try {
+      return await service.run();
+    } on Object catch (e) {
+      // Auto-sync is best-effort: a failed liked pull (backend 502, offline,
+      // expired YT auth, etc.) must never crash the app or surface as an
+      // unhandled exception. Log and skip; the next trigger retries.
+      debugPrint('Liked auto-sync failed: $e');
+      return null;
+    }
   };
 });
