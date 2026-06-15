@@ -56,6 +56,11 @@ class HomeScreen extends ConsumerWidget {
             icon: const Icon(Icons.library_music),
             onPressed: () => context.push('/library'),
           ),
+          IconButton(
+            tooltip: 'Backend health',
+            icon: const Icon(Icons.monitor_heart_outlined),
+            onPressed: () => context.push('/health'),
+          ),
         ],
       ),
       body: feed.when(

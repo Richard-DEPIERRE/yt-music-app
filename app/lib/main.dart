@@ -11,12 +11,21 @@ import 'package:ytmusic/core/audio/audio_handler.dart';
 import 'package:ytmusic/core/audio/audio_providers.dart';
 import 'package:ytmusic/core/db/db_providers.dart';
 import 'package:ytmusic/core/downloads/download_providers.dart';
+import 'package:ytmusic/core/logging/app_log.dart';
 import 'package:ytmusic/core/settings/settings_providers.dart';
 import 'package:ytmusic/core/settings/settings_repository.dart';
 import 'package:ytmusic/core/sync/background_sync.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  AppLog.i('App', 'starting up');
+
+  // Surface any otherwise-silent framework / async errors in the console.
+  FlutterError.onError = (details) {
+    AppLog.e('Flutter', details.summary.toString(), details.exception,
+        details.stack);
+    FlutterError.presentError(details);
+  };
 
   // Late-bind the container so the handler's apiClientFactory closure can read
   // from the same container the override is installed on. Two-scope nesting
@@ -58,6 +67,11 @@ Future<void> main() async {
   // Without this, the redirect runs while a FutureProvider is still loading,
   // sees null, and sends a configured user to /onboarding every cold start.
   final initialConfig = await SettingsRepository().read();
+  final configured = initialConfig?.isComplete ?? false;
+  AppLog.i('App',
+      configured
+          ? 'config loaded: configured (${initialConfig!.baseUrl})'
+          : 'config loaded: not configured → onboarding');
 
   container = ProviderContainer(
     overrides: [audioHandlerProvider.overrideWithValue(handler)],
@@ -67,6 +81,7 @@ Future<void> main() async {
     container.read(downloadCoordinatorProvider).configureGatewayAndStart(),
   );
   unawaited(registerLikedAutoSync());
+  AppLog.i('App', 'runApp');
 
   runApp(
     UncontrolledProviderScope(

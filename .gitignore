@@ -42,3 +42,6 @@ Thumbs.db
 
 # Docker
 data/
+
+# Ad-hoc backend log captures (may contain session/cookie hints)
+backend-prod-logs/

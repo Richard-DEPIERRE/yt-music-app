@@ -8,6 +8,7 @@ import 'package:ytmusic/core/downloads/background_downloader_gateway.dart';
 import 'package:ytmusic/core/downloads/download_coordinator.dart';
 import 'package:ytmusic/core/downloads/download_repository.dart';
 import 'package:ytmusic/core/library/library_repository.dart';
+import 'package:ytmusic/core/logging/app_log.dart';
 import 'package:ytmusic/core/settings/settings_repository.dart';
 import 'package:ytmusic/core/sync/liked_auto_sync_service.dart';
 
@@ -27,8 +28,12 @@ void callbackDispatcher() {
     // WidgetsFlutterBinding is ensured by executeTask before invoking this
     // callback. Build all dependencies from scratch — no Riverpod in this
     // isolate.
+    AppLog.i('BgSync', 'background task fired: $task');
     final config = await SettingsRepository().read();
-    if (config == null) return true; // not configured -> nothing to do
+    if (config == null) {
+      AppLog.w('BgSync', 'not configured; nothing to do');
+      return true; // not configured -> nothing to do
+    }
 
     final db = AppDatabase();
     try {
@@ -66,7 +71,10 @@ void callbackDispatcher() {
           db: db,
           enqueue: repo.enqueue,
         );
-        await service.run();
+        final result = await service.run();
+        AppLog.i('BgSync',
+            'liked sync done: ${result.liked} liked, '
+            '${result.newlyQueued} newly queued');
 
         // No stream watcher runs in this isolate, so drive the coordinator
         // once. reconcile() re-queues rows left as 'downloading' from a
@@ -74,6 +82,12 @@ void callbackDispatcher() {
         // native background transfer system (persists across isolate teardown).
         await coordinator.reconcile();
         await coordinator.processQueueOnce();
+      } on Object catch (e, st) {
+        // Best-effort: log then rethrow so workmanager records the failure and
+        // applies its backoff. The ApiException carries the backend body, so
+        // this shows *why* a background liked sync failed.
+        AppLog.e('BgSync', 'background liked sync failed', e, st);
+        rethrow;
       } finally {
         // Always dispose to release the gateway's StreamSubscription +
         // StreamController, even if service.run() / reconcile() / processQueueOnce()

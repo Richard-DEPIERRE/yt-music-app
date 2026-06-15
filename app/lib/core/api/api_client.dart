@@ -9,15 +9,73 @@ import 'package:ytmusic/core/api/models/queue_item.dart';
 import 'package:ytmusic/core/api/models/search_result.dart';
 import 'package:ytmusic/core/api/models/stream_info.dart';
 import 'package:ytmusic/core/api/models/track.dart';
+import 'package:ytmusic/core/logging/app_log.dart';
 
 class ApiException implements Exception {
-  ApiException(this.statusCode, this.message);
+  ApiException(this.statusCode, this.message, {this.body});
+
+  /// Builds an [ApiException] from a Dio error, preserving the response body.
+  ///
+  /// The body is the single most useful field when debugging: the backend
+  /// puts the real upstream cause in `detail` (e.g. for a 502 from
+  /// `/v1/library/liked`, the actual ytmusicapi exception / expired-auth
+  /// reason). Dio's `message` alone only says "status code 502".
+  factory ApiException.fromDio(DioException e) => ApiException(
+        e.response?.statusCode ?? 0,
+        e.message ?? 'Network error',
+        body: e.response?.data,
+      );
 
   final int statusCode;
   final String message;
 
+  /// The parsed response body, when the server returned one (often a
+  /// `{"detail": "..."}` map describing what failed upstream).
+  final Object? body;
+
   @override
-  String toString() => 'ApiException($statusCode): $message';
+  String toString() => body == null
+      ? 'ApiException($statusCode): $message'
+      : 'ApiException($statusCode): $message — body: $body';
+}
+
+/// Logs every request, response and error (with the response body on failure)
+/// through [AppLog] under the `API` tag. Added last so it sees the final
+/// request that actually goes out.
+class _LoggingInterceptor extends Interceptor {
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    AppLog.d('API', '→ ${options.method} ${options.uri}');
+    if (AppLog.logNetworkBodies && options.data != null) {
+      AppLog.d('API', '  ↳ request body: ${options.data}');
+    }
+    handler.next(options);
+  }
+
+  @override
+  void onResponse(
+    Response<dynamic> response,
+    ResponseInterceptorHandler handler,
+  ) {
+    final ro = response.requestOptions;
+    AppLog.d('API', '← ${response.statusCode} ${ro.method} ${ro.path}');
+    handler.next(response);
+  }
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    final ro = err.requestOptions;
+    AppLog.e(
+      'API',
+      '✗ ${err.response?.statusCode ?? '-'} ${ro.method} ${ro.path} '
+      '(${err.type.name})${err.message != null ? ' ${err.message}' : ''}',
+    );
+    final body = err.response?.data;
+    if (body != null) {
+      AppLog.e('API', '  ↳ response body: $body');
+    }
+    handler.next(err);
+  }
 }
 
 class HealthResult {
@@ -58,7 +116,10 @@ class ApiClient {
               'CF-Access-Client-Secret': config.cfAccessClientSecret,
             },
           ),
-        );
+        ) {
+    dio.interceptors.add(_LoggingInterceptor());
+    AppLog.i('API', 'ApiClient ready (baseUrl=${config.baseUrl})');
+  }
 
   final Dio dio;
 
@@ -70,10 +131,7 @@ class ApiClient {
       }
       return HealthResult.fromJson(res.data!);
     } on DioException catch (e) {
-      throw ApiException(
-        e.response?.statusCode ?? 0,
-        e.message ?? 'Network error',
-      );
+      throw ApiException.fromDio(e);
     }
   }
 
@@ -96,10 +154,7 @@ class ApiClient {
           .toList();
       return items;
     } on DioException catch (e) {
-      throw ApiException(
-        e.response?.statusCode ?? 0,
-        e.message ?? 'Network error',
-      );
+      throw ApiException.fromDio(e);
     }
   }
 
@@ -108,10 +163,7 @@ class ApiClient {
       final res = await dio.get<Map<String, dynamic>>('/v1/track/$videoId');
       return Track.fromJson(res.data!);
     } on DioException catch (e) {
-      throw ApiException(
-        e.response?.statusCode ?? 0,
-        e.message ?? 'Network error',
-      );
+      throw ApiException.fromDio(e);
     }
   }
 
@@ -127,10 +179,7 @@ class ApiClient {
       );
       return StreamInfo.fromJson(res.data!);
     } on DioException catch (e) {
-      throw ApiException(
-        e.response?.statusCode ?? 0,
-        e.message ?? 'Network error',
-      );
+      throw ApiException.fromDio(e);
     }
   }
 
@@ -142,10 +191,7 @@ class ApiClient {
       );
       return PagedLikedSongs.fromJson(res.data!);
     } on DioException catch (e) {
-      throw ApiException(
-        e.response?.statusCode ?? 0,
-        e.message ?? 'Network error',
-      );
+      throw ApiException.fromDio(e);
     }
   }
 
@@ -155,10 +201,7 @@ class ApiClient {
           await dio.get<Map<String, dynamic>>('/v1/library/playlists');
       return PagedPlaylists.fromJson(res.data!);
     } on DioException catch (e) {
-      throw ApiException(
-        e.response?.statusCode ?? 0,
-        e.message ?? 'Network error',
-      );
+      throw ApiException.fromDio(e);
     }
   }
 
@@ -175,10 +218,7 @@ class ApiClient {
       );
       return PlaylistDetail.fromJson(res.data!);
     } on DioException catch (e) {
-      throw ApiException(
-        e.response?.statusCode ?? 0,
-        e.message ?? 'Network error',
-      );
+      throw ApiException.fromDio(e);
     }
   }
 
@@ -189,10 +229,7 @@ class ApiClient {
       );
       return PagedSubscriptions.fromJson(res.data!);
     } on DioException catch (e) {
-      throw ApiException(
-        e.response?.statusCode ?? 0,
-        e.message ?? 'Network error',
-      );
+      throw ApiException.fromDio(e);
     }
   }
 
@@ -202,10 +239,7 @@ class ApiClient {
           await dio.get<Map<String, dynamic>>('/v1/library/history');
       return PagedHistory.fromJson(res.data!);
     } on DioException catch (e) {
-      throw ApiException(
-        e.response?.statusCode ?? 0,
-        e.message ?? 'Network error',
-      );
+      throw ApiException.fromDio(e);
     }
   }
 
@@ -215,10 +249,7 @@ class ApiClient {
           await dio.get<Map<String, dynamic>>('/v1/album/$browseId');
       return AlbumDetail.fromJson(res.data!);
     } on DioException catch (e) {
-      throw ApiException(
-        e.response?.statusCode ?? 0,
-        e.message ?? 'Network error',
-      );
+      throw ApiException.fromDio(e);
     }
   }
 
@@ -228,10 +259,7 @@ class ApiClient {
           await dio.get<Map<String, dynamic>>('/v1/artist/$browseId');
       return ArtistDetail.fromJson(res.data!);
     } on DioException catch (e) {
-      throw ApiException(
-        e.response?.statusCode ?? 0,
-        e.message ?? 'Network error',
-      );
+      throw ApiException.fromDio(e);
     }
   }
 
@@ -245,10 +273,7 @@ class ApiClient {
           .map((e) => QueueItem.fromJson(e as Map<String, dynamic>))
           .toList();
     } on DioException catch (e) {
-      throw ApiException(
-        e.response?.statusCode ?? 0,
-        e.message ?? 'Network error',
-      );
+      throw ApiException.fromDio(e);
     }
   }
 
@@ -265,10 +290,7 @@ class ApiClient {
           .map((e) => QueueItem.fromJson(e as Map<String, dynamic>))
           .toList();
     } on DioException catch (e) {
-      throw ApiException(
-        e.response?.statusCode ?? 0,
-        e.message ?? 'Network error',
-      );
+      throw ApiException.fromDio(e);
     }
   }
 
@@ -279,10 +301,7 @@ class ApiClient {
           .map((e) => HomeSection.fromJson(e as Map<String, dynamic>))
           .toList();
     } on DioException catch (e) {
-      throw ApiException(
-        e.response?.statusCode ?? 0,
-        e.message ?? 'Network error',
-      );
+      throw ApiException.fromDio(e);
     }
   }
 
@@ -302,10 +321,7 @@ class ApiClient {
       );
       return DownloadManifest.fromJson(res.data!);
     } on DioException catch (e) {
-      throw ApiException(
-        e.response?.statusCode ?? 0,
-        e.message ?? 'Network error',
-      );
+      throw ApiException.fromDio(e);
     }
   }
 }

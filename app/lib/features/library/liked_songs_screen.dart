@@ -6,6 +6,7 @@ import 'package:ytmusic/core/audio/audio_providers.dart';
 import 'package:ytmusic/core/db/database.dart';
 import 'package:ytmusic/core/db/db_providers.dart';
 import 'package:ytmusic/core/library/library_providers.dart';
+import 'package:ytmusic/core/logging/app_log.dart';
 import 'package:ytmusic/features/library/widgets/track_list_tile.dart';
 
 final AutoDisposeStreamProvider<List<Track>> _likedStreamProvider =
@@ -24,15 +25,20 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
   @override
   void initState() {
     super.initState();
+    AppLog.d('LikedSongs', 'screen opened');
     Future.microtask(() async {
       final repo = ref.read(libraryRepositoryProvider);
-      if (repo == null) return;
+      if (repo == null) {
+        AppLog.d('LikedSongs',
+            'initial refresh skipped: backend not configured');
+        return;
+      }
       // Best-effort refresh: the cached liked list (Drift stream) still
       // renders if the network pull fails (e.g. backend 502 / expired YT auth).
       try {
         await repo.refreshLikedIfStale();
-      } on Object catch (e) {
-        debugPrint('Liked refresh failed: $e');
+      } on Object catch (e, st) {
+        AppLog.e('LikedSongs', 'initial liked refresh failed', e, st);
       }
     });
   }
@@ -40,10 +46,11 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
   Future<void> _refresh() async {
     final repo = ref.read(libraryRepositoryProvider);
     if (repo == null) return;
+    AppLog.i('LikedSongs', 'pull-to-refresh triggered');
     try {
       await repo.refreshLiked();
-    } on Object catch (e) {
-      debugPrint('Liked refresh failed: $e');
+    } on Object catch (e, st) {
+      AppLog.e('LikedSongs', 'manual liked refresh failed', e, st);
     }
   }
 
