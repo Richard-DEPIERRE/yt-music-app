@@ -26,6 +26,17 @@ class ResolvedStream:
     bitrate: int  # bps
     approx_duration_ms: int
     content_length: int | None
+    artwork_url: str | None = None
+
+
+def _best_thumbnail(thumbnails: list[dict[str, Any]] | None) -> str | None:
+    if not thumbnails:
+        return None
+    best = max(
+        thumbnails,
+        key=lambda t: int(t.get("width") or 0) * int(t.get("height") or 0),
+    )
+    return best.get("url")
 
 
 _QUALITY_RANGES = {
@@ -125,6 +136,7 @@ class StreamResolver:
         chosen = _pick_format(formats, codec=codec, quality=quality)
         url = chosen["url"]
         expires = _expires_at_from_url(url)
+        artwork = _best_thumbnail(info.get("thumbnails"))
 
         return ResolvedStream(
             video_id=info.get("id", video_id),
@@ -135,4 +147,5 @@ class StreamResolver:
             bitrate=int(chosen.get("abr", 0)) * 1000,
             approx_duration_ms=int((info.get("duration") or 0) * 1000),
             content_length=chosen.get("filesize"),
+            artwork_url=artwork,
         )

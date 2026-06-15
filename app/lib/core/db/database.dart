@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import 'package:ytmusic/core/db/connection.dart';
 import 'package:ytmusic/core/db/daos/albums_dao.dart';
 import 'package:ytmusic/core/db/daos/artists_dao.dart';
+import 'package:ytmusic/core/db/daos/downloads_dao.dart';
 import 'package:ytmusic/core/db/daos/playlists_dao.dart';
 import 'package:ytmusic/core/db/daos/recently_played_dao.dart';
 import 'package:ytmusic/core/db/daos/sync_state_dao.dart';
@@ -26,6 +27,7 @@ part 'database.g.dart';
   daos: [
     AlbumsDao,
     ArtistsDao,
+    DownloadsDao,
     PlaylistsDao,
     RecentlyPlayedDao,
     SyncStateDao,

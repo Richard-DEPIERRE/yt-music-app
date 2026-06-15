@@ -42,4 +42,14 @@ class TracksDao extends DatabaseAccessor<AppDatabase> with _$TracksDaoMixin {
       ]);
     return q.watch();
   }
+
+  Future<void> touchLastPlayed(String videoId) =>
+      (update(tracks)..where((t) => t.videoId.equals(videoId))).write(
+        TracksCompanion(lastPlayedAt: Value(DateTime.now())),
+      );
+
+  Stream<String> watchStatus(String videoId) =>
+      (select(tracks)..where((t) => t.videoId.equals(videoId)))
+          .watchSingleOrNull()
+          .map((row) => row?.downloadStatus ?? 'not_downloaded');
 }

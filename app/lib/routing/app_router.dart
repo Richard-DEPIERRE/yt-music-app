@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:ytmusic/core/settings/settings_providers.dart';
 import 'package:ytmusic/features/album/album_detail_screen.dart';
 import 'package:ytmusic/features/artist/artist_detail_screen.dart';
+import 'package:ytmusic/features/downloads/downloads_screen.dart';
 import 'package:ytmusic/features/health/health_screen.dart';
 import 'package:ytmusic/features/home/home_screen.dart';
 import 'package:ytmusic/features/library/history_screen.dart';
@@ -85,6 +86,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => ArtistDetailScreen(
           browseId: state.pathParameters['browseId']!,
         ),
+      ),
+      GoRoute(
+        path: '/downloads',
+        builder: (context, state) => const DownloadsScreen(),
       ),
     ],
   );

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,6 +7,7 @@ import 'package:ytmusic/core/audio/audio_providers.dart';
 import 'package:ytmusic/core/catalog/catalog_providers.dart';
 import 'package:ytmusic/core/db/database.dart';
 import 'package:ytmusic/core/db/db_providers.dart';
+import 'package:ytmusic/features/downloads/widgets/download_button.dart';
 import 'package:ytmusic/features/library/widgets/track_list_tile.dart';
 
 class AlbumDetailScreen extends ConsumerStatefulWidget {
@@ -19,6 +21,12 @@ class AlbumDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen> {
+  List<String> _trackVideoIds = const [];
+
+  // Cached future for track lookup — keyed by the row IDs currently shown.
+  List<String> _cachedRowIds = const [];
+  Future<List<Track>>? _tracksFuture;
+
   @override
   void initState() {
     super.initState();
@@ -55,7 +63,13 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen> {
   Widget build(BuildContext context) {
     final db = ref.watch(appDatabaseProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Album')),
+      appBar: AppBar(
+        title: const Text('Album'),
+        actions: [
+          if (_trackVideoIds.isNotEmpty)
+            DownloadButton(videoIds: _trackVideoIds),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: StreamBuilder<List<AlbumTrack>>(
@@ -68,9 +82,15 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen> {
                 Center(child: Text('No tracks.')),
               ]);
             }
+            // Rebuild the cached future only when the set of row IDs changes.
+            final rowIds = rows.map((r) => r.videoId).toList();
+            if (!listEquals(rowIds, _cachedRowIds)) {
+              _cachedRowIds = rowIds;
+              _tracksFuture =
+                  db.tracksDao.getByIds(rowIds);
+            }
             return FutureBuilder<List<Track>>(
-              future: db.tracksDao
-                  .getByIds(rows.map((r) => r.videoId).toList()),
+              future: _tracksFuture,
               builder: (ctx, ts) {
                 final tracks = ts.data ?? const <Track>[];
                 if (tracks.isEmpty) {
@@ -84,6 +104,14 @@ class _AlbumDetailScreenState extends ConsumerState<AlbumDetailScreen> {
                   for (final r in rows)
                     if (byId[r.videoId] != null) byId[r.videoId]!,
                 ];
+                // Update AppBar DownloadButton once tracks are resolved.
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  final ids = ordered.map((t) => t.videoId).toList();
+                  if (!listEquals(ids, _trackVideoIds)) {
+                    setState(() => _trackVideoIds = ids);
+                  }
+                });
                 return ListView.builder(
                   itemCount: ordered.length,
                   itemBuilder: (ctx, i) {

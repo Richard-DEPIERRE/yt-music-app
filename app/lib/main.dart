@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +9,8 @@ import 'package:ytmusic/app.dart';
 import 'package:ytmusic/core/api/api_providers.dart';
 import 'package:ytmusic/core/audio/audio_handler.dart';
 import 'package:ytmusic/core/audio/audio_providers.dart';
+import 'package:ytmusic/core/db/db_providers.dart';
+import 'package:ytmusic/core/downloads/download_providers.dart';
 import 'package:ytmusic/core/settings/settings_providers.dart';
 import 'package:ytmusic/core/settings/settings_repository.dart';
 
@@ -21,6 +26,25 @@ Future<void> main() async {
   final handler = await AudioService.init(
     builder: () => AudioPlaybackHandler(
       apiClientFactory: () => container.read(apiClientProvider),
+      localFileFor: (videoId) async {
+        final row = await container
+            .read(appDatabaseProvider)
+            .tracksDao
+            .getById(videoId);
+        if (row?.downloadStatus == 'downloaded' && row?.localPath != null) {
+          // ignore: avoid_slow_async_io — File.exists() is required here; sync existsSync() is forbidden on the main isolate
+          return await File(row!.localPath!).exists() ? row.localPath : null;
+        }
+        return null;
+      },
+      onPlayed: (videoId) {
+        unawaited(
+          container
+              .read(appDatabaseProvider)
+              .tracksDao
+              .touchLastPlayed(videoId),
+        );
+      },
     ),
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'com.richarddepierre.ytmusic.audio',
@@ -38,6 +62,9 @@ Future<void> main() async {
     overrides: [audioHandlerProvider.overrideWithValue(handler)],
   );
   container.read(apiConfigProvider.notifier).state = initialConfig;
+  unawaited(
+    container.read(downloadCoordinatorProvider).configureGatewayAndStart(),
+  );
 
   runApp(
     UncontrolledProviderScope(
