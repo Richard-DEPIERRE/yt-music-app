@@ -123,9 +123,16 @@ class StreamResolver:
             "no_warnings": True,
             "skip_download": True,
             "format": "bestaudio/best",
+            # Point the bgutil-ytdlp-pot-provider plugin at our HTTP sidecar so
+            # yt-dlp can fetch GVS Proof-of-Origin tokens. Without this YouTube
+            # returns "Sign in to confirm you're not a bot" (HTTP 403) for the
+            # default web clients. The key/namespace must match the installed
+            # plugin (`youtubepot-bgutilhttp:base_url=...`), NOT a `youtube`
+            # extractor arg — the previous `po_token_provider_url` was a no-op,
+            # so no token was ever sent.
             "extractor_args": {
-                "youtube": {
-                    "po_token_provider_url": [self._pot_provider_url],
+                "youtubepot-bgutilhttp": {
+                    "base_url": [self._pot_provider_url],
                 },
             },
         }
