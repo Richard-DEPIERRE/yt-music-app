@@ -16,7 +16,7 @@ final likedAutoSyncProvider = Provider<LikedAutoSyncService?>((ref) {
   return LikedAutoSyncService(
     library: library,
     db: ref.watch(appDatabaseProvider),
-    enqueue: (ids, {bool pinned = false}) => repo.enqueue(ids, pinned: pinned),
+    enqueue: repo.enqueue,
   );
 });
 
