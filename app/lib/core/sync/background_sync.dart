@@ -34,8 +34,23 @@ void callbackDispatcher() {
     try {
       final api = ApiClient(config: config);
       final repo = DownloadRepository(db);
+      // Do NOT call gateway.configure() here. configure() installs a
+      // MemoryTaskQueue whose add() returns immediately and hands off to the
+      // native layer asynchronously (~20 ms per task). Because this isolate
+      // tears down immediately after processQueueOnce() returns, most tasks
+      // never reach the OS.
+      //
+      // Without a configured queue, BackgroundDownloaderGateway.enqueue falls
+      // back to `await FileDownloader().enqueue(task)`, which is a direct,
+      // synchronous-to-the-caller native handoff. FileDownloader.enqueue() does
+      // not require start() — it dispatches straight to the OS background
+      // transfer system. Because DownloadCoordinator.processQueueOnce() awaits
+      // each gateway.enqueue call, every task is fully handed off to the OS
+      // before the dispatcher's finally block runs.
+      //
+      // The foreground gateway (fileDownloaderGatewayProvider) still calls
+      // configure() to get the MemoryTaskQueue's concurrency limiting.
       final gateway = BackgroundDownloaderGateway();
-      await gateway.configure();
 
       // Construct coordinator before the inner try so it is reachable in the
       // finally block even if service.run() throws before coordinator is used.

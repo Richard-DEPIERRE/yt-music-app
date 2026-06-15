@@ -68,6 +68,31 @@ void main() {
     expect(rows.first.videoId, 'old');
   });
 
+  test(
+      'lruUnpinned tie-breaks by downloadedAt asc '
+      'when lastPlayedAt is null for both',
+      () async {
+    // Two unpinned downloaded tracks; neither has ever been played
+    // (lastPlayedAt stays null after markDownloaded). The older download
+    // (by downloadedAt) must come first so eviction order is deterministic.
+    await seed('newer', status: 'downloading');
+    await db.downloadsDao.markDownloaded('newer',
+        localPath: '/newer', sizeBytes: 1, codec: 'aac', bitrate: 1);
+    // Small delay so downloadedAt timestamps are strictly ordered.
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    await seed('older', status: 'downloading');
+    await db.downloadsDao.markDownloaded('older',
+        localPath: '/older', sizeBytes: 1, codec: 'aac', bitrate: 1);
+
+    // Swap insert order to make sure result is driven by downloadedAt,
+    // not insertion order.
+    final rows = await db.downloadsDao.lruUnpinned();
+    final ids = rows.map((r) => r.videoId).toList();
+    expect(ids.indexOf('newer'), lessThan(ids.indexOf('older')),
+        reason:
+            'older downloadedAt (newer inserted first) must be evicted first');
+  });
+
   test('ensureTracks inserts absent rows but never overwrites existing status',
       () async {
     // Seed an existing row as 'downloaded' (simulates a previously-downloaded
