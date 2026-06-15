@@ -101,10 +101,16 @@ class DownloadsDao extends DatabaseAccessor<AppDatabase>
         ..where((t) =>
             t.downloadStatus.equals('downloaded') & t.pinned.equals(false))
         ..orderBy([
+          // Primary: least-recently played first; nulls (never played) come
+          // before any played track.
           (t) => OrderingTerm(
                 expression: t.lastPlayedAt,
                 nulls: NullsOrder.first,
               ),
+          // Tie-break: among tracks with the same lastPlayedAt (e.g. all null
+          // for auto-downloads that have never been played), evict the oldest
+          // download first so the order is deterministic.
+          (t) => OrderingTerm(expression: t.downloadedAt),
         ]))
       .get();
 

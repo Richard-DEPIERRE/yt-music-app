@@ -34,6 +34,10 @@ class TracksDao extends DatabaseAccessor<AppDatabase> with _$TracksDaoMixin {
 
   Future<List<Track>> allTracks() => select(tracks).get();
 
+  Future<List<Track>> getLiked() => (select(tracks)
+        ..where((t) => t.isLiked.equals(true)))
+      .get();
+
   Stream<List<Track>> watchLiked() {
     final q = select(tracks)
       ..where((t) => t.isLiked.equals(true))

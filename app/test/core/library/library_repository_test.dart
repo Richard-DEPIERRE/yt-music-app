@@ -54,6 +54,27 @@ void main() {
     verifyNever(() => api.getLikedSongs(limit: any(named: 'limit')));
   });
 
+  test('refreshLikedReturningNew returns only newly-liked ids', () async {
+    when(() => api.getLikedSongs(limit: any(named: 'limit'))).thenAnswer(
+      (_) async => PagedLikedSongs(
+        items: [LikedSong(videoId: 'v1', title: 'One')],
+      ),
+    );
+    final first = await repo.refreshLikedReturningNew();
+    expect(first, {'v1'}); // v1 was not liked before
+
+    when(() => api.getLikedSongs(limit: any(named: 'limit'))).thenAnswer(
+      (_) async => PagedLikedSongs(
+        items: [
+          LikedSong(videoId: 'v1', title: 'One'),
+          LikedSong(videoId: 'v2', title: 'Two'),
+        ],
+      ),
+    );
+    final second = await repo.refreshLikedReturningNew();
+    expect(second, {'v2'}); // v1 already liked; only v2 is new
+  });
+
   test('refreshPlaylistDetail replaces tracks atomically', () async {
     when(() => api.getPlaylistDetail('PL1')).thenAnswer(
       (_) async => PlaylistDetail(

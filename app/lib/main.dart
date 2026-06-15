@@ -13,6 +13,7 @@ import 'package:ytmusic/core/db/db_providers.dart';
 import 'package:ytmusic/core/downloads/download_providers.dart';
 import 'package:ytmusic/core/settings/settings_providers.dart';
 import 'package:ytmusic/core/settings/settings_repository.dart';
+import 'package:ytmusic/core/sync/background_sync.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,6 +66,7 @@ Future<void> main() async {
   unawaited(
     container.read(downloadCoordinatorProvider).configureGatewayAndStart(),
   );
+  unawaited(registerLikedAutoSync());
 
   runApp(
     UncontrolledProviderScope(
