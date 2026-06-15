@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:workmanager/workmanager.dart';
 
 import 'package:ytmusic/core/api/api_client.dart';
@@ -35,26 +37,35 @@ void callbackDispatcher() {
       final gateway = BackgroundDownloaderGateway();
       await gateway.configure();
 
-      final service = LikedAutoSyncService(
-        library: LibraryRepository(db: db, api: api),
-        db: db,
-        enqueue: repo.enqueue,
-      );
-      await service.run();
-
-      // No stream watcher runs in this isolate, so drive the coordinator once.
-      // reconcile() re-queues any rows left as 'downloading' from a previous
-      // run; processQueueOnce() enqueues them to FileDownloader's native
-      // background transfer system (persists across isolate teardown).
+      // Construct coordinator before the inner try so it is reachable in the
+      // finally block even if service.run() throws before coordinator is used.
       final coordinator = DownloadCoordinator(
         repository: repo,
         gateway: gateway,
         fetchManifest: api.getManifest,
       );
-      await coordinator.reconcile();
-      await coordinator.processQueueOnce();
-      coordinator.dispose();
-      gateway.dispose();
+
+      try {
+        final service = LikedAutoSyncService(
+          library: LibraryRepository(db: db, api: api),
+          db: db,
+          enqueue: repo.enqueue,
+        );
+        await service.run();
+
+        // No stream watcher runs in this isolate, so drive the coordinator
+        // once. reconcile() re-queues rows left as 'downloading' from a
+        // previous run; processQueueOnce() enqueues them to FileDownloader's
+        // native background transfer system (persists across isolate teardown).
+        await coordinator.reconcile();
+        await coordinator.processQueueOnce();
+      } finally {
+        // Always dispose to release the gateway's StreamSubscription +
+        // StreamController, even if service.run() / reconcile() / processQueueOnce()
+        // throws.
+        coordinator.dispose();
+        gateway.dispose();
+      }
     } finally {
       await db.close();
     }
@@ -69,13 +80,25 @@ void callbackDispatcher() {
 Future<void> registerLikedAutoSync() async {
   try {
     await Workmanager().initialize(callbackDispatcher);
-    await Workmanager().registerPeriodicTask(
-      _kLikedSyncUniqueName,
-      kLikedSyncTask,
-      frequency: const Duration(hours: 6),
-      constraints: Constraints(networkType: NetworkType.connected),
-      existingWorkPolicy: ExistingWorkPolicy.keep,
-    );
+    if (Platform.isAndroid) {
+      // registerPeriodicTask is Android-only. The iOS workmanager plugin
+      // (workmanager 0.5.2, SwiftWorkmanagerPlugin) only handles: initialize,
+      // registerOneOffTask, cancelAllTasks, cancelTaskByUniqueName — there is
+      // no periodic-task case. Calling it on iOS errors and is silently
+      // swallowed, but gating it here makes the behaviour honest and avoids
+      // spurious channel errors.
+      await Workmanager().registerPeriodicTask(
+        _kLikedSyncUniqueName,
+        kLikedSyncTask,
+        frequency: const Duration(hours: 6),
+        constraints: Constraints(networkType: NetworkType.connected),
+        existingWorkPolicy: ExistingWorkPolicy.keep,
+      );
+    }
+    // iOS: periodic tasks are unsupported by workmanager; background runs are
+    // driven by the OS background-fetch path (UIBackgroundModes: fetch in
+    // Info.plist, best-effort, OS-throttled). The reliable trigger is the
+    // foreground AutoSyncObserver.
   } on Object {
     // Swallow: workmanager channel is unavailable in test environments and
     // on first run before the plugin is initialised. Foreground sync is the
